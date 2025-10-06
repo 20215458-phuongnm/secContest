@@ -2,15 +2,7 @@
   <div class="admin-login">
     <div class="login-container">
       <div class="login-header">
-        <div class="admin-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 4L9 7V9C9 10 8 11 7 11V13C8 13 9 14 9 15V16L12 18L15 16V15C15 14 16 13 17 13V11C16 11 15 10 15 9ZM12 8C14.2 8 16 9.8 16 12S14.2 16 12 16S8 14.2 8 12S9.8 8 12 8Z"
-            />
-          </svg>
-        </div>
-        <h1>ADMIN PANEL</h1>
-        <p>Đăng nhập hệ thống quản trị</p>
+        <h1>ADMIN</h1>
       </div>
 
       <form @submit.prevent="handleLogin" class="login-form">
@@ -59,10 +51,6 @@
         <p>Email: <strong>admin@sectest.com</strong></p>
         <p>Mật khẩu: <strong>admin123</strong></p>
       </div> -->
-
-      <div class="login-footer">
-        <p>© 2025 Admin Panel - Bảo mật & Tin cậy</p>
-      </div>
     </div>
   </div>
 </template>

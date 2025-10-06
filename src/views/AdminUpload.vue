@@ -160,7 +160,6 @@
     <!-- Success Message -->
     <div v-if="showSuccess" class="success-message" @click="showSuccess = false">
       <div class="success-content">
-        <div class="success-icon">✅</div>
         <h3>Tạo câu hỏi thành công!</h3>
         <p>Câu hỏi đã được lưu vào hệ thống.</p>
       </div>
