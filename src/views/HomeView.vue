@@ -42,7 +42,7 @@ const handleLogin = async () => {
       <div class="login-form">
         <h1 class="login-title">ĐĂNG NHẬP</h1>
         <div class="title-underline"></div>
-<!-- 
+        <!-- 
         <div class="demo-info">
           <strong>🎓 Demo - Tài khoản thí sinh:</strong>
           Email: student@sectest.com<br />
@@ -59,7 +59,7 @@ const handleLogin = async () => {
               required
               class="form-input"
               :class="{ error: error }"
-              placeholder="student@sectest.com"
+              placeholder="Your email"
             />
           </div>
 
@@ -72,7 +72,7 @@ const handleLogin = async () => {
               required
               class="form-input"
               :class="{ error: error }"
-              placeholder="student123"
+              placeholder="Your password"
             />
           </div>
 
