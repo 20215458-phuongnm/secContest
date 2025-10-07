@@ -32,16 +32,32 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { requireUserAuth, performLogout, getUser } from '@/utils/auth.js'
 
 const router = useRouter()
 
-const goHome = () => {
+// Check authentication on component mount
+onMounted(() => {
+  try {
+    requireUserAuth()
+    console.log('User authenticated for results:', getUser())
+  } catch (error) {
+    console.error('Authentication failed:', error)
+    router.push('/')
+  }
+})
+
+const goHome = async () => {
   // Clear any remaining quiz data
   localStorage.removeItem('quizState')
   localStorage.removeItem('userRegistration')
 
-  // Redirect to home page
+  // Call logout API and clear auth
+  await performLogout()
+
+  // Redirect to login
   router.push('/')
 }
 </script>

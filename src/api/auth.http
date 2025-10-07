@@ -1,0 +1,13 @@
+### Authentication APIs
+
+### Login Admin
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### Variables (update token sau khi login)
+# @token = your_jwt_token_here

@@ -1,0 +1,69 @@
+### Questions Management APIs
+
+### Get All Questions
+GET http://localhost:3000/questions
+Authorization: Bearer {{token}}
+
+### Create New Question
+POST http://localhost:3000/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "TCP là gì?",
+  "imageUrl": "https://sec-com.s3.ap-southeast-1.amazonaws.com/questions/1759821600688-icon.png",
+  "isActive": true,
+  "answers": [
+    {
+      "content": "Transmission Control Protocol",
+      "isCorrect": true,
+      "order": 1
+    },
+    {
+      "content": "Transfer Control Protocol", 
+      "isCorrect": false,
+      "order": 2
+    },
+    {
+      "content": "Transport Communication Protocol",
+      "isCorrect": false,
+      "order": 3
+    },
+    {
+      "content": "Technical Control Protocol",
+      "isCorrect": false,
+      "order": 4
+    }
+  ]
+}
+
+### Update Question
+PUT http://localhost:3000/questions/{{questionId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Updated question content",
+  "imageUrl": "https://example.com/image.png",
+  "isActive": true,
+  "answers": [
+    {
+      "content": "Answer 1",
+      "isCorrect": true,
+      "order": 1
+    },
+    {
+      "content": "Answer 2",
+      "isCorrect": false,
+      "order": 2
+    }
+  ]
+}
+
+### Delete Question
+DELETE http://localhost:3000/questions/{{questionId}}
+Authorization: Bearer {{token}}
+
+### Get Question by ID
+GET http://localhost:3000/questions/{{questionId}}
+Authorization: Bearer {{token}}

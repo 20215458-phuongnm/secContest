@@ -38,7 +38,22 @@
 </template>
 
 <script setup>
-import { RouterLink } from 'vue-router'
+import { onMounted } from 'vue'
+import { useRouter, RouterLink } from 'vue-router'
+import { requireUserAuth, getUser } from '@/utils/auth.js'
+
+const router = useRouter()
+
+// Check authentication on component mount
+onMounted(() => {
+  try {
+    requireUserAuth()
+    console.log('User authenticated for about page:', getUser())
+  } catch (error) {
+    console.error('Authentication failed:', error)
+    router.push('/')
+  }
+})
 </script>
 
 <style scoped>

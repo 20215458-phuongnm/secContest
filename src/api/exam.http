@@ -1,0 +1,23 @@
+### Exam APIs
+
+### Start Exam
+POST http://localhost:3000/exam/start
+Authorization: Bearer {{token}}
+
+### Get Exam Questions
+GET http://localhost:3000/exam/questions
+Authorization: Bearer {{token}}
+
+### Submit Exam Answer
+POST http://localhost:3000/exam/answer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "questionId": "question_id_here",
+  "answerId": "answer_id_here"
+}
+
+### Finish Exam
+POST http://localhost:3000/exam/finish
+Authorization: Bearer {{token}}

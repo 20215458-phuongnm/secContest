@@ -46,7 +46,7 @@
         <div class="quick-actions">
           <h2>Thao tác nhanh</h2>
           <div class="actions-grid">
-            <RouterLink to="/admin/upload" class="action-card ">
+            <RouterLink to="/admin/upload" class="action-card">
               <h3>Tạo câu hỏi</h3>
               <p>Tạo câu hỏi trắc nghiệm mới</p>
             </RouterLink>
@@ -55,7 +55,6 @@
               <h3>Quản lý câu hỏi</h3>
               <p>Xem danh sách câu hỏi</p>
             </RouterLink>
-
           </div>
         </div>
       </div>
@@ -66,6 +65,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { performLogout } from '@/utils/auth.js'
 
 const router = useRouter()
 
@@ -77,9 +77,15 @@ const stats = ref({
   testsToday: 45,
 })
 
-const logout = () => {
+const logout = async () => {
+  // Call logout API and clear auth
+  await performLogout()
+
+  // Clear old admin session data (backward compatibility)
   localStorage.removeItem('adminLoggedIn')
   localStorage.removeItem('adminEmail')
+
+  // Redirect to admin login
   router.push('/admin')
 }
 

@@ -36,19 +36,33 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { requireUserAuth, performLogout, getUser } from '@/utils/auth.js'
 
 const router = useRouter()
+
+// Check authentication on component mount
+onMounted(() => {
+  try {
+    requireUserAuth()
+    console.log('User authenticated:', getUser())
+  } catch (error) {
+    console.error('Authentication failed:', error)
+    router.push('/')
+  }
+})
 
 const startQuiz = () => {
   // Chuyển đến trang làm bài thi
   router.push('/quiz-questions')
 }
 
-const logout = () => {
-  // Xóa session và chuyển về trang đăng nhập
-  localStorage.removeItem('studentLoggedIn')
-  localStorage.removeItem('studentEmail')
+const logout = async () => {
+  // Call logout API and clear auth
+  await performLogout()
+
+  // Redirect to login
   router.push('/')
 }
 </script>

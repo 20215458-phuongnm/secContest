@@ -100,6 +100,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { requireUserAuth, clearAuth, getUser } from '@/utils/auth.js'
 
 const router = useRouter()
 
@@ -282,6 +283,16 @@ const preventRightClick = (e) => {
 
 // Lifecycle
 onMounted(() => {
+  // Check authentication first
+  try {
+    requireUserAuth()
+    console.log('User authenticated for quiz:', getUser())
+  } catch (error) {
+    console.error('Authentication failed:', error)
+    router.push('/')
+    return
+  }
+
   // Load saved quiz state first
   loadQuizState()
 

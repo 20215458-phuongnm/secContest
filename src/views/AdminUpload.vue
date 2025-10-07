@@ -102,7 +102,7 @@
                   @click="addAnswer"
                   class="add-answer-btn"
                 >
-                   Thêm đáp án
+                  Thêm đáp án
                 </button>
               </div>
             </div>
@@ -170,6 +170,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { performLogout } from '@/utils/auth.js'
 import FileUpload from '@/components/FileUpload.vue'
 
 const router = useRouter()
@@ -204,9 +205,15 @@ const isFormValid = computed(() => {
 })
 
 // Methods
-const logout = () => {
+const logout = async () => {
+  // Call logout API and clear auth
+  await performLogout()
+
+  // Clear old admin session data (backward compatibility)
   localStorage.removeItem('adminLoggedIn')
   localStorage.removeItem('adminEmail')
+
+  // Redirect to admin login
   router.push('/admin')
 }
 

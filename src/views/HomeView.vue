@@ -1,39 +1,128 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import authApi from '@/api/authApi.js'
 
 const router = useRouter()
 
 // Form data
 const form = ref({
-  email: '',
+  username: '',
   password: '',
 })
 
 const loading = ref(false)
 const error = ref('')
+const success = ref('')
+
+// Validation
+const validateForm = () => {
+  if (!form.value.username.trim()) {
+    error.value = 'Vui lòng nhập tên đăng nhập'
+    return false
+  }
+
+  if (!form.value.password.trim()) {
+    error.value = 'Vui lòng nhập mật khẩu'
+    return false
+  }
+
+  return true
+}
 
 // Handle login
 const handleLogin = async () => {
+  if (!validateForm()) {
+    return
+  }
+
   loading.value = true
   error.value = ''
+  success.value = ''
 
-  // Simulate login process
-  setTimeout(() => {
-    // Demo credentials - in real app this would be API call
-    if (form.value.email === 'student@sectest.com' && form.value.password === 'student123') {
-      // Store student session
-      localStorage.setItem('studentLoggedIn', 'true')
-      localStorage.setItem('studentEmail', form.value.email)
-
-      // Redirect to quiz page
-      router.push('/quiz')
-    } else {
-      error.value = 'Email hoặc mật khẩu không đúng!'
+  try {
+    // Prepare login credentials
+    const credentials = {
+      username: form.value.username.trim(),
+      password: form.value.password.trim(),
     }
+
+    console.log('Login credentials:', credentials)
+
+    // Call login API
+    const response = await authApi.login(credentials)
+
+    console.log('Login response:', response)
+
+    // Handle successful login
+    if (response.success && response.data) {
+      const { user, accessToken, refreshToken } = response.data
+
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('refreshToken', refreshToken)
+
+      // Store user info
+      localStorage.setItem('user', JSON.stringify(user))
+
+      loading.value = false
+      success.value = 'Đăng nhập thành công!'
+
+      // Redirect based on user role
+      setTimeout(() => {
+        if (user.role === 'admin') {
+          router.push('/admin/dashboard')
+        } else if (user.role === 'user') {
+          router.push('/quiz')
+        } else {
+          router.push('/dashboard')
+        }
+      }, 1000)
+    } else {
+      throw new Error(response.message || 'Đăng nhập không thành công')
+    }
+  } catch (err) {
     loading.value = false
-  }, 1500)
+    console.error('Login error:', err)
+    console.error('Error details:', {
+      message: err.message,
+      response: err.response,
+      status: err.response?.status,
+      data: err.response?.data,
+    })
+
+    // Handle different error types
+    if (err.response?.status === 401) {
+      error.value = 'Tên đăng nhập hoặc mật khẩu không đúng'
+    } else if (err.response?.status === 400) {
+      error.value = 'Thông tin đăng nhập không hợp lệ'
+    } else if (err.response?.status === 500) {
+      error.value = 'Lỗi máy chủ, vui lòng thử lại sau'
+    } else if (err.response?.data?.message) {
+      error.value = err.response.data.message
+    } else if (err.message) {
+      if (err.message.includes('Network Error')) {
+        error.value = 'Không thể kết nối tới server. Vui lòng kiểm tra server có đang chạy không.'
+      } else {
+        error.value = err.message
+      }
+    } else if (typeof err === 'string') {
+      error.value = err
+    } else {
+      error.value = 'Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại!'
+    }
+  }
 }
+
+// Clear error when user starts typing
+const clearError = () => {
+  error.value = ''
+  success.value = ''
+}
+
+// Watch form changes to clear errors
+import { watch } from 'vue'
+watch([() => form.value.username, () => form.value.password], clearError)
 </script>
 
 <template>
@@ -51,15 +140,15 @@ const handleLogin = async () => {
 
         <form @submit.prevent="handleLogin" class="form">
           <div class="form-group">
-            <label for="email">Email:</label>
+            <label for="username">Tên đăng nhập:</label>
             <input
-              id="email"
-              v-model="form.email"
-              type="email"
+              id="username"
+              v-model="form.username"
+              type="text"
               required
               class="form-input"
               :class="{ error: error }"
-              placeholder="Your email"
+              placeholder="Nhập tên đăng nhập"
             />
           </div>
 
@@ -72,7 +161,7 @@ const handleLogin = async () => {
               required
               class="form-input"
               :class="{ error: error }"
-              placeholder="Your password"
+              placeholder="Nhập mật khẩu"
             />
           </div>
 
@@ -88,6 +177,10 @@ const handleLogin = async () => {
 
           <div v-if="error" class="error-message">
             {{ error }}
+          </div>
+
+          <div v-if="success" class="success-message">
+            {{ success }}
           </div>
         </form>
       </div>
@@ -228,6 +321,17 @@ const handleLogin = async () => {
   background: rgba(229, 62, 62, 0.1);
   border-radius: 8px;
   border: 1px solid rgba(229, 62, 62, 0.2);
+}
+
+.success-message {
+  color: #047857;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .admin-link-container {

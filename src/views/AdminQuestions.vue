@@ -120,6 +120,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { performLogout } from '@/utils/auth.js'
 
 const router = useRouter()
 const adminEmail = ref('')
@@ -338,9 +339,15 @@ const paginatedQuestions = computed(() => {
 })
 
 // Methods
-const logout = () => {
+const logout = async () => {
+  // Call logout API and clear auth
+  await performLogout()
+
+  // Clear old admin session data (backward compatibility)
   localStorage.removeItem('adminLoggedIn')
   localStorage.removeItem('adminEmail')
+
+  // Redirect to admin login
   router.push('/admin')
 }
 

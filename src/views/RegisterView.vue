@@ -24,20 +24,6 @@
           <!-- Row 2: Khu vực & Ngày sinh -->
           <div class="form-row">
             <div class="form-group">
-              <label for="region">Khu vực:</label>
-              <v-select
-                id="region"
-                v-model="form.region"
-                :items="regionItems"
-                placeholder="Chọn khu vực"
-                required
-                :error-messages="errors.region"
-                variant="outlined"
-                density="comfortable"
-                class="vuetify-input"
-              ></v-select>
-            </div>
-            <div class="form-group">
               <label for="birthDate">Ngày sinh:</label>
               <v-text-field
                 id="birthDate"
@@ -118,14 +104,13 @@
             </div>
           </div>
 
-          <!-- Row 5: Info text -->
-          <div class="info-text">
+          <!-- Row 5: Info text - Only show for universities other than "Trường khác" -->
+          <div v-if="!showCustomUniversity" class="info-text">
             Nếu bạn là <strong>Sinh viên tại các trường</strong> nêu trên, vui lòng điền:
-            <strong>Mã sinh viên</strong>:
           </div>
 
-          <!-- Row 6: Mã sinh viên & Ngành học -->
-          <div class="form-row">
+          <!-- Row 6: Mã sinh viên & Ngành học - Only show for universities other than "Trường khác" -->
+          <div v-if="!showCustomUniversity" class="form-row">
             <div class="form-group">
               <label for="studentId">Mã sinh viên:</label>
               <v-text-field
@@ -154,8 +139,8 @@
             </div>
           </div>
 
-          <!-- Row 7: Lớp học phần & Bạn là sinh viên năm -->
-          <div class="form-row">
+          <!-- Row 7: Lớp học phần & Bạn là sinh viên năm - Only show for universities other than "Trường khác" -->
+          <div v-if="!showCustomUniversity" class="form-row">
             <div class="form-group">
               <label for="classCode">Lớp học phần:</label>
               <v-text-field
@@ -185,21 +170,8 @@
             </div>
           </div>
 
-          <!-- Row 8: CCCD/CMND & Link Facebook -->
-          <div class="form-row">
-            <div class="form-group">
-              <label for="idCard">CCCD/CMND:</label>
-              <v-text-field
-                id="idCard"
-                v-model="form.idCard"
-                placeholder="Số CCCD/CMND"
-                required
-                :error-messages="errors.idCard"
-                variant="outlined"
-                density="comfortable"
-                class="vuetify-input"
-              ></v-text-field>
-            </div>
+          <!-- Row 8: Link Facebook - Only show for universities other than "Trường khác" -->
+          <div v-if="!showCustomUniversity" class="form-row">
             <div class="form-group">
               <label for="facebook">Link Facebook:</label>
               <v-text-field
@@ -240,6 +212,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import authApi from '@/api/authApi.js'
 
 const router = useRouter()
 
@@ -317,6 +290,12 @@ const handleUniversityChange = () => {
   if (form.value.university === 'other') {
     showCustomUniversity.value = true
     form.value.university = ''
+    // Clear student fields when switching to "Trường khác"
+    form.value.studentId = ''
+    form.value.major = ''
+    form.value.classCode = ''
+    form.value.year = ''
+    form.value.facebook = ''
   } else {
     form.value.customUniversity = ''
     showCustomUniversity.value = false
@@ -328,14 +307,25 @@ const backToSelect = () => {
   showCustomUniversity.value = false
   form.value.university = ''
   form.value.customUniversity = ''
+  // Clear student fields when going back to select
+  form.value.studentId = ''
+  form.value.major = ''
+  form.value.classCode = ''
+  form.value.year = ''
+  form.value.facebook = ''
 }
 
 // Validation
 const validateForm = () => {
   errors.value = {}
 
+  // Required fields for all users
   if (!form.value.fullName.trim()) {
     errors.value.fullName = 'Vui lòng nhập họ và tên'
+  }
+
+  if (!form.value.birthDate) {
+    errors.value.birthDate = 'Vui lòng chọn ngày sinh'
   }
 
   if (!form.value.email.includes('@')) {
@@ -346,26 +336,36 @@ const validateForm = () => {
     errors.value.phone = 'Số điện thoại không hợp lệ'
   }
 
-  if (!form.value.studentId.trim()) {
-    errors.value.studentId = 'Vui lòng nhập mã sinh viên'
-  }
-
-  if (!form.value.idCard.match(/^[0-9]{9,12}$/)) {
-    errors.value.idCard = 'CCCD/CMND không hợp lệ'
-  }
-
-  if (!form.value.region) {
-    errors.value.region = 'Vui lòng chọn khu vực'
-  }
-
-  if (!form.value.year) {
-    errors.value.year = 'Vui lòng chọn năm học'
-  }
-
+  // University validation
   if (showCustomUniversity.value && !form.value.customUniversity.trim()) {
     errors.value.university = 'Vui lòng nhập tên trường'
   } else if (!showCustomUniversity.value && !form.value.university) {
     errors.value.university = 'Vui lòng chọn trường'
+  }
+
+  // Required fields for students at specific universities (not "Trường khác")
+  if (!showCustomUniversity.value) {
+    // These fields are required for all universities except "Trường khác"
+    if (!form.value.studentId.trim()) {
+      errors.value.studentId = 'Vui lòng nhập mã sinh viên'
+    }
+
+    if (!form.value.major.trim()) {
+      errors.value.major = 'Vui lòng nhập ngành học'
+    }
+
+    if (!form.value.classCode.trim()) {
+      errors.value.classCode = 'Vui lòng nhập lớp học phần'
+    }
+
+    if (!form.value.year) {
+      errors.value.year = 'Vui lòng chọn năm học'
+    }
+  }
+
+  // Facebook link validation (optional but if provided must be valid)
+  if (form.value.facebook && !form.value.facebook.includes('facebook.com')) {
+    errors.value.facebook = 'Link Facebook không hợp lệ'
   }
 
   return Object.keys(errors.value).length === 0
@@ -382,14 +382,63 @@ const handleRegister = async () => {
   error.value = ''
   success.value = ''
 
-  // Simulate registration process
-  setTimeout(() => {
-    // In real app, this would be API call
-    loading.value = false
+  try {
+    // Prepare registration data
+    const registrationData = {
+      fullName: form.value.fullName.trim(),
+      dateOfBirth: form.value.birthDate,
+      email: form.value.email.trim(),
+      phoneNumber: form.value.phone.trim(),
+    }
 
-    // Redirect to success page
-    router.push('/registration-success')
-  }, 2000)
+    // Handle university selection
+    if (showCustomUniversity.value && form.value.customUniversity) {
+      // For "Trường khác" - only send basic info
+      registrationData.university = 'Trường khác'
+      registrationData.otherUniversity = form.value.customUniversity.trim()
+    } else {
+      // For specific universities - send full student info
+      registrationData.university = form.value.university
+      registrationData.studentId = form.value.studentId.trim()
+      registrationData.major = form.value.major.trim()
+      registrationData.className = form.value.classCode.trim()
+      registrationData.yearOfStudy = parseInt(form.value.year)
+    }
+
+    // Add optional facebook link
+    if (form.value.facebook && form.value.facebook.trim()) {
+      registrationData.facebookLink = form.value.facebook.trim()
+    }
+
+    // Debug log
+    console.log('Registration data:', registrationData)
+
+    // Call registration API
+    const response = await authApi.register(registrationData)
+
+    loading.value = false
+    success.value = 'Đăng ký thành công!'
+
+    // Redirect to success page after a short delay
+    setTimeout(() => {
+      router.push('/registration-success')
+    }, 1500)
+  } catch (err) {
+    loading.value = false
+    console.error('Registration error:', err)
+
+    // Handle different error types
+    if (err && err.errors && Array.isArray(err.errors)) {
+      // Display validation errors from API
+      error.value = err.errors.join(', ')
+    } else if (err && err.message) {
+      error.value = err.message
+    } else if (typeof err === 'string') {
+      error.value = err
+    } else {
+      error.value = 'Có lỗi xảy ra khi đăng ký. Vui lòng thử lại!'
+    }
+  }
 }
 </script>
 
