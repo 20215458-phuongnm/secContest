@@ -29,6 +29,18 @@ const authApi = {
   register: (registrationData) => {
     return axiosClient.post('/registration', registrationData)
   },
+
+  // Export registrations to Excel
+  exportRegistrationsExcel: () => {
+    const token = localStorage.getItem('accessToken')
+    return axiosClient.get('/registration/export/excel', {
+      responseType: 'blob', // Important for file downloads
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+  },
 }
 
 export default authApi

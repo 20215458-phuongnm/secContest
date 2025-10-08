@@ -1,9 +1,16 @@
 import axiosClient from './axiosClient.js'
 
 const questionApi = {
-  // Get all questions with pagination and filters
+  // Get all questions - active only by default
   getQuestions: (params = {}) => {
     return axiosClient.get('/questions', { params })
+  },
+
+  // Get all questions including inactive ones
+  getAllQuestions: (includeInactive = true) => {
+    return axiosClient.get('/questions', {
+      params: { includeInactive },
+    })
   },
 
   // Get question by ID
@@ -11,14 +18,25 @@ const questionApi = {
     return axiosClient.get(`/questions/${id}`)
   },
 
+  // Get random active questions
+  getRandomActiveQuestions: (count) => {
+    const params = count ? { count } : {}
+    return axiosClient.get('/questions/random/active', { params })
+  },
+
   // Create new question
   createQuestion: (questionData) => {
     return axiosClient.post('/questions', questionData)
   },
 
-  // Update question
+  // Update question (full update)
   updateQuestion: (id, questionData) => {
     return axiosClient.put(`/questions/${id}`, questionData)
+  },
+
+  // Partial update question
+  patchQuestion: (id, questionData) => {
+    return axiosClient.patch(`/questions/${id}`, questionData)
   },
 
   // Delete question
@@ -49,7 +67,7 @@ const questionApi = {
   // Upload question image
   uploadQuestionImage: (imageFile) => {
     const formData = new FormData()
-    formData.append('image', imageFile)
+    formData.append('file', imageFile) // Changed from 'image' to 'file' to match API
 
     return axiosClient.post('/questions/upload-image', formData, {
       headers: {

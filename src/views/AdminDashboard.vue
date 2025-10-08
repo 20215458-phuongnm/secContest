@@ -46,15 +46,34 @@
         <div class="quick-actions">
           <h2>Thao tác nhanh</h2>
           <div class="actions-grid">
-            <RouterLink to="/admin/upload" class="action-card">
+            <RouterLink to="/admin/upload" class="action-card create-btn">
+              <div class="action-icon">
+                <span>✏️</span>
+              </div>
               <h3>Tạo câu hỏi</h3>
               <p>Tạo câu hỏi trắc nghiệm mới</p>
             </RouterLink>
 
-            <RouterLink to="/admin/questions" class="action-card">
+            <RouterLink to="/admin/questions" class="action-card manage-btn">
+              <div class="action-icon">
+                <span>📋</span>
+              </div>
               <h3>Quản lý câu hỏi</h3>
               <p>Xem danh sách câu hỏi</p>
             </RouterLink>
+
+            <button
+              @click="exportRegistrations"
+              class="action-card export-btn"
+              :disabled="isExporting"
+            >
+              <div class="action-icon">
+                <span v-if="isExporting">⏳</span>
+                <span v-else>📊</span>
+              </div>
+              <h3>{{ isExporting ? 'Đang xuất...' : 'Xuất danh sách thí sinh' }}</h3>
+              <p>Tải file Excel danh sách đăng ký</p>
+            </button>
           </div>
         </div>
       </div>
@@ -66,6 +85,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { performLogout } from '@/utils/auth.js'
+import authApi from '@/api/authApi.js'
 
 const router = useRouter()
 
@@ -76,6 +96,56 @@ const stats = ref({
   totalUsers: 324,
   testsToday: 45,
 })
+const isExporting = ref(false)
+
+const exportRegistrations = async () => {
+  isExporting.value = true
+  try {
+    // Check if we have a valid token
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+      router.push('/admin')
+      return
+    }
+
+    console.log('Exporting with token:', token ? 'Token exists' : 'No token')
+    const response = await authApi.exportRegistrationsExcel()
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+
+    // Generate filename with current date
+    const now = new Date()
+    const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
+    link.setAttribute('download', `danh-sach-thi-sinh-${dateStr}.xlsx`)
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+
+    console.log('Export successful')
+  } catch (error) {
+    console.error('Export failed:', error)
+
+    // Handle specific authentication errors
+    if (error.response?.status === 401) {
+      alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('adminLoggedIn')
+      router.push('/admin')
+    } else if (error.response?.status === 403) {
+      alert('Bạn không có quyền truy cập chức năng này.')
+    } else {
+      alert('Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.')
+    }
+  } finally {
+    isExporting.value = false
+  }
+}
 
 const logout = async () => {
   // Call logout API and clear auth
@@ -274,8 +344,9 @@ onMounted(() => {
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   border: 2px solid transparent;
+  text-align: center;
 }
 
 .action-card:hover {
@@ -283,30 +354,118 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.action-card.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.action-card.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-}
-
 .action-icon {
   font-size: 2rem;
   margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+}
+
+.action-icon span {
+  display: inline-block;
+  animation: pulse 2s infinite;
 }
 
 .action-card h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1.25rem;
+  text-align: center;
 }
 
 .action-card p {
   margin: 0;
   opacity: 0.8;
   font-size: 0.875rem;
+  text-align: center;
+}
+
+/* Create Button Styles - Blue */
+.create-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%) !important;
+  color: white !important;
+  border: none;
+}
+
+.create-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.create-btn h3 {
+  color: white !important;
+}
+
+.create-btn p {
+  color: rgba(255, 255, 255, 0.9) !important;
+  opacity: 1 !important;
+}
+
+/* Manage Button Styles - Purple */
+.manage-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  color: white !important;
+  border: none;
+}
+
+.manage-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.manage-btn h3 {
+  color: white !important;
+}
+
+.manage-btn p {
+  color: rgba(255, 255, 255, 0.9) !important;
+  opacity: 1 !important;
+}
+
+/* Export Button Styles - Green */
+.export-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.export-btn:disabled {
+  background: #9ca3af !important;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.export-btn h3 {
+  color: white !important;
+}
+
+.export-btn p {
+  color: rgba(255, 255, 255, 0.9) !important;
+  opacity: 1 !important;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .activity-list {

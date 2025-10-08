@@ -19,6 +19,142 @@ import api from '@/api'
 // Use like: api.auth.login(), api.exam.startExam(), etc.
 ```
 
+## New Question API Examples
+
+### Upload Image and Create Question
+
+```javascript
+import questionApi from '@/api/questionApi.js'
+
+// Upload image
+const uploadImage = async (file) => {
+  try {
+    const response = await questionApi.uploadQuestionImage(file)
+    console.log('Image uploaded:', response.data)
+    return response.data.url // Assuming API returns URL
+  } catch (error) {
+    console.error('Upload failed:', error)
+    throw error
+  }
+}
+
+// Create question with full data
+const createQuestion = async () => {
+  const questionData = {
+    content: 'TCP là gì?',
+    imageUrl: 'https://sec-com.s3.ap-southeast-1.amazonaws.com/questions/1759821600688-icon.png',
+    isActive: true,
+    answers: [
+      {
+        content: 'Transmission Control Protocol',
+        isCorrect: true,
+        order: 1,
+      },
+      {
+        content: 'Transfer Control Protocol',
+        isCorrect: false,
+        order: 2,
+      },
+      {
+        content: 'Transport Communication Protocol',
+        isCorrect: false,
+        order: 3,
+      },
+      {
+        content: 'Technical Control Protocol',
+        isCorrect: false,
+        order: 4,
+      },
+    ],
+  }
+
+  try {
+    const response = await questionApi.createQuestion(questionData)
+    console.log('Question created:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Create failed:', error)
+    throw error
+  }
+}
+
+// Partial update question
+const updateQuestion = async (questionId) => {
+  const updateData = {
+    content: 'TCP là gì? (Updated)',
+  }
+
+  try {
+    const response = await questionApi.patchQuestion(questionId, updateData)
+    console.log('Question updated:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Update failed:', error)
+    throw error
+  }
+}
+
+// Get all active questions (default behavior)
+const getActiveQuestions = async () => {
+  try {
+    const response = await questionApi.getQuestions()
+    console.log('Active questions:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Get questions failed:', error)
+    throw error
+  }
+}
+
+// Get all questions including inactive ones
+const getAllQuestions = async () => {
+  try {
+    const response = await questionApi.getAllQuestions(true)
+    console.log('All questions:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Get all questions failed:', error)
+    throw error
+  }
+}
+
+// Get specific question by ID
+const getQuestionById = async (questionId) => {
+  try {
+    const response = await questionApi.getQuestionById(questionId)
+    console.log('Question details:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Get question failed:', error)
+    throw error
+  }
+}
+
+// Delete question
+const deleteQuestion = async (questionId) => {
+  try {
+    const response = await questionApi.deleteQuestion(questionId)
+    console.log('Question deleted:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Delete failed:', error)
+    throw error
+  }
+}
+
+// Get random active questions for quiz
+const getRandomQuestions = async (count = 10) => {
+  try {
+    const response = await questionApi.getRandomActiveQuestions(count)
+    console.log('Random questions:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Get random questions failed:', error)
+    throw error
+  }
+}
+```
+
 ## Usage Examples
 
 ### Authentication

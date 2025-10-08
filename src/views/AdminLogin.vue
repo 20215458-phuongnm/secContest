@@ -7,13 +7,13 @@
 
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
-          <label for="email">Email:</label>
+          <label for="username">Tên đăng nhập:</label>
           <input
-            type="email"
-            id="email"
-            v-model="form.email"
+            type="text"
+            id="username"
+            v-model="form.username"
             required
-            placeholder="Nhập địa chỉ email"
+            placeholder="Nhập tên đăng nhập"
           />
         </div>
 
@@ -58,53 +58,136 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import authApi from '@/api/authApi.js'
 
 const router = useRouter()
 
 const form = ref({
-  email: '',
+  username: '',
   password: '',
   remember: false,
 })
 
 const loading = ref(false)
 const error = ref('')
+const success = ref('')
 
-// Fake admin account
-const ADMIN_CREDENTIALS = {
-  email: 'admin@sectest.com',
-  password: 'admin123',
+// Validation
+const validateForm = () => {
+  if (!form.value.username.trim()) {
+    error.value = 'Vui lòng nhập tên đăng nhập'
+    return false
+  }
+
+  if (!form.value.password.trim()) {
+    error.value = 'Vui lòng nhập mật khẩu'
+    return false
+  }
+
+  return true
 }
 
 const handleLogin = async () => {
+  if (!validateForm()) {
+    return
+  }
+
   loading.value = true
   error.value = ''
+  success.value = ''
 
-  // Simulate login process
-  setTimeout(() => {
-    if (
-      form.value.email === ADMIN_CREDENTIALS.email &&
-      form.value.password === ADMIN_CREDENTIALS.password
-    ) {
-      // Store admin session
+  try {
+    // Prepare login credentials
+    const credentials = {
+      username: form.value.username.trim(),
+      password: form.value.password.trim(),
+    }
+
+    console.log('Admin login credentials:', credentials)
+
+    // Call login API
+    const response = await authApi.login(credentials)
+
+    console.log('Admin login response:', response)
+
+    // Handle successful login
+    if (response.success && response.data) {
+      const { user, accessToken, refreshToken } = response.data
+
+      // Verify admin role
+      if (user.role !== 'admin') {
+        throw new Error('Bạn không có quyền truy cập trang admin')
+      }
+
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('refreshToken', refreshToken)
+
+      // Store user info
+      localStorage.setItem('user', JSON.stringify(user))
+
+      // Store legacy admin session (backward compatibility)
       localStorage.setItem('adminLoggedIn', 'true')
-      localStorage.setItem('adminEmail', form.value.email)
+      localStorage.setItem('adminEmail', user.email)
+
+      loading.value = false
+      success.value = 'Đăng nhập thành công!'
 
       // Redirect to admin dashboard
-      router.push('/admin/dashboard')
+      setTimeout(() => {
+        router.push('/admin/dashboard')
+      }, 1000)
     } else {
-      error.value = 'Email hoặc mật khẩu không đúng!'
+      throw new Error(response.message || 'Đăng nhập không thành công')
     }
+  } catch (err) {
     loading.value = false
-  }, 1500)
+    console.error('Admin login error:', err)
+    console.error('Error details:', {
+      message: err.message,
+      response: err.response,
+      status: err.response?.status,
+      data: err.response?.data,
+    })
+
+    // Handle different error types
+    if (err.response?.status === 401) {
+      error.value = 'Tên đăng nhập hoặc mật khẩu không đúng'
+    } else if (err.response?.status === 400) {
+      error.value = 'Thông tin đăng nhập không hợp lệ'
+    } else if (err.response?.status === 500) {
+      error.value = 'Lỗi máy chủ, vui lòng thử lại sau'
+    } else if (err.response?.data?.message) {
+      error.value = err.response.data.message
+    } else if (err.message) {
+      if (err.message.includes('Network Error')) {
+        error.value = 'Không thể kết nối tới server. Vui lòng kiểm tra server có đang chạy không.'
+      } else {
+        error.value = err.message
+      }
+    } else if (typeof err === 'string') {
+      error.value = err
+    } else {
+      error.value = 'Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại!'
+    }
+  }
 }
+
+// Clear error when user starts typing
+const clearError = () => {
+  error.value = ''
+  success.value = ''
+}
+
+// Watch form changes to clear errors
+import { watch } from 'vue'
+watch([() => form.value.username, () => form.value.password], clearError)
 </script>
 
 <style scoped>
 .admin-login {
   min-height: 100vh;
-  background:
-    url('../assets/desktopback.png');
+  background: url('../assets/desktopback.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;

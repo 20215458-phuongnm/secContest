@@ -94,6 +94,20 @@
                       Đúng
                     </label>
                   </div>
+
+                  <!-- Answer Image Upload -->
+                  <div class="answer-image-upload">
+                    <label class="answer-image-label">Ảnh đáp án (tùy chọn)</label>
+                    <FileUpload
+                      v-model="answer.image"
+                      accept="image/*"
+                      :title="`Tải ảnh đáp án ${index + 1}`"
+                      supportedFormats="JPG, PNG, GIF (tối đa 2MB)"
+                      :maxSize="2 * 1024 * 1024"
+                      @preview="answer.imagePreview = $event"
+                      class="compact-upload"
+                    />
+                  </div>
                 </div>
 
                 <button
@@ -111,7 +125,10 @@
             <div class="form-actions">
               <button type="button" @click="resetForm" class="reset-btn">Làm mới</button>
               <button type="submit" :disabled="!isFormValid || isSaving" class="save-btn">
-                <span v-if="isSaving">Đang lưu...</span>
+                <span v-if="isSaving" class="loading-content">
+                  <span class="spinner"></span>
+                  {{ uploadProgress || 'Đang lưu...' }}
+                </span>
                 <span v-else>Lưu câu hỏi</span>
               </button>
               <button
@@ -120,7 +137,11 @@
                 :disabled="!isFormValid || isSaving"
                 class="save-new-btn"
               >
-                Lưu & Tạo mới
+                <span v-if="isSaving" class="loading-content">
+                  <span class="spinner"></span>
+                  {{ uploadProgress || 'Đang lưu...' }}
+                </span>
+                <span v-else>Lưu & Tạo mới</span>
               </button>
             </div>
           </form>
@@ -147,8 +168,18 @@
                 class="preview-answer"
                 :class="{ correct: answer.isCorrect }"
               >
-                <span class="answer-letter">{{ String.fromCharCode(65 + index) }}.</span>
-                {{ answer.content }}
+                <div class="answer-content">
+                  <span class="answer-letter">{{ String.fromCharCode(65 + index) }}.</span>
+                  <div class="answer-text-and-image">
+                    <span class="answer-text">{{ answer.content }}</span>
+                    <img
+                      v-if="answer.imagePreview"
+                      :src="answer.imagePreview"
+                      alt="Answer image"
+                      class="answer-preview-image"
+                    />
+                  </div>
+                </div>
                 <span v-if="answer.isCorrect" class="correct-indicator">✓</span>
               </div>
             </div>
@@ -160,8 +191,18 @@
     <!-- Success Message -->
     <div v-if="showSuccess" class="success-message" @click="showSuccess = false">
       <div class="success-content">
+        <div class="success-icon">✅</div>
         <h3>Tạo câu hỏi thành công!</h3>
         <p>Câu hỏi đã được lưu vào hệ thống.</p>
+      </div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="showError" class="error-message" @click="showError = false">
+      <div class="error-content">
+        <div class="error-icon">❌</div>
+        <h3>Lỗi khi tạo câu hỏi!</h3>
+        <p>{{ errorMessage }}</p>
       </div>
     </div>
   </div>
@@ -172,6 +213,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { performLogout } from '@/utils/auth.js'
 import FileUpload from '@/components/FileUpload.vue'
+import questionApi from '@/api/questionApi.js'
 
 const router = useRouter()
 
@@ -179,6 +221,9 @@ const router = useRouter()
 const adminEmail = ref('')
 const isSaving = ref(false)
 const showSuccess = ref(false)
+const errorMessage = ref('')
+const showError = ref(false)
+const uploadProgress = ref('')
 
 // Question data
 const question = ref({
@@ -186,8 +231,8 @@ const question = ref({
   image: null,
   imagePreview: null,
   answers: [
-    { content: '', isCorrect: false },
-    { content: '', isCorrect: false },
+    { content: '', isCorrect: false, image: null, imagePreview: null },
+    { content: '', isCorrect: false, image: null, imagePreview: null },
   ],
   category: 'Toán',
   difficulty: 'Trung bình',
@@ -221,7 +266,7 @@ const logout = async () => {
 
 const addAnswer = () => {
   if (question.value.answers.length < 6) {
-    question.value.answers.push({ content: '', isCorrect: false })
+    question.value.answers.push({ content: '', isCorrect: false, image: null, imagePreview: null })
   }
 }
 
@@ -247,22 +292,89 @@ const saveQuestion = async () => {
   if (!isFormValid.value) return
 
   isSaving.value = true
+  showError.value = false
 
-  // Simulate saving
-  await new Promise((resolve) => setTimeout(resolve, 1500))
+  try {
+    // 1. Upload main question image if exists
+    let questionImageUrl = null
+    if (question.value.image) {
+      uploadProgress.value = 'Đang tải ảnh câu hỏi...'
+      console.log('Uploading question image:', question.value.image.name)
+      const imageResponse = await questionApi.uploadQuestionImage(question.value.image)
+      questionImageUrl = imageResponse.data.imageUrl // API returns data.imageUrl field
+      console.log('Question image uploaded successfully:', questionImageUrl)
+    }
 
-  // Show success message
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
+    // 2. Upload answer images if exist and prepare answers
+    uploadProgress.value = 'Đang tải ảnh đáp án...'
+    const processedAnswers = await Promise.all(
+      question.value.answers
+        .filter((answer) => answer.content.trim()) // Only process answers with content
+        .map(async (answer, index) => {
+          let answerImageUrl = null
+          if (answer.image) {
+            console.log('Uploading answer image:', answer.image.name)
+            const answerImageResponse = await questionApi.uploadQuestionImage(answer.image)
+            answerImageUrl = answerImageResponse.data.imageUrl // API returns data.imageUrl field
+            console.log('Answer image uploaded successfully:', answerImageUrl)
+          }
 
-  isSaving.value = false
+          return {
+            content: answer.content.trim(),
+            isCorrect: answer.isCorrect,
+            order: index + 1, // Use filtered index for correct order
+            imageUrl: answerImageUrl,
+          }
+        }),
+    )
+
+    // 3. Prepare question data
+    const questionData = {
+      content: question.value.content.trim(),
+      imageUrl: questionImageUrl,
+      isActive: true,
+      answers: processedAnswers,
+    }
+
+    console.log('Creating question with data:', questionData)
+
+    // 4. Create question
+    uploadProgress.value = 'Đang tạo câu hỏi...'
+    const response = await questionApi.createQuestion(questionData)
+
+    if (response.success) {
+      console.log('Question created successfully:', response.data)
+
+      // Show success message
+      showSuccess.value = true
+      setTimeout(() => {
+        showSuccess.value = false
+      }, 3000)
+    } else {
+      throw new Error(response.message || 'Failed to create question')
+    }
+  } catch (error) {
+    console.error('Save question failed:', error)
+
+    // Show error message to user
+    errorMessage.value =
+      error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu câu hỏi'
+    showError.value = true
+    setTimeout(() => {
+      showError.value = false
+    }, 5000)
+  } finally {
+    isSaving.value = false
+    uploadProgress.value = ''
+  }
 }
 
 const saveAndCreateNew = async () => {
+  const originalShowSuccess = showSuccess.value
   await saveQuestion()
-  if (!isSaving.value) {
+
+  // Only reset form if save was successful (no error shown)
+  if (!isSaving.value && !showError.value) {
     resetForm()
   }
 }
@@ -273,8 +385,8 @@ const resetForm = () => {
     image: null,
     imagePreview: null,
     answers: [
-      { content: '', isCorrect: false },
-      { content: '', isCorrect: false },
+      { content: '', isCorrect: false, image: null, imagePreview: null },
+      { content: '', isCorrect: false, image: null, imagePreview: null },
     ],
     category: 'Toán',
     difficulty: 'Trung bình',
@@ -509,6 +621,46 @@ onMounted(() => {
   flex: 1;
 }
 
+.answer-image-upload {
+  margin-top: 0.75rem;
+}
+
+.answer-image-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.compact-upload {
+  font-size: 0.875rem;
+}
+
+.compact-upload .upload-area {
+  min-height: 80px;
+  padding: 1rem;
+}
+
+.compact-upload .upload-content h4 {
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.compact-upload .upload-content p {
+  font-size: 0.75rem;
+  margin: 0.25rem 0;
+}
+
+.compact-upload .upload-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.compact-upload .image-preview img {
+  max-height: 80px;
+}
+
 .correct-checkbox {
   display: flex;
   align-items: center;
@@ -599,6 +751,27 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+.loading-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .preview-section h3 {
   margin: 0 0 1.5rem 0;
   color: #2d3748;
@@ -635,7 +808,7 @@ onMounted(() => {
 
 .preview-answer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.75rem;
   background: white;
@@ -649,15 +822,43 @@ onMounted(() => {
   color: #166534;
 }
 
+.answer-content {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  align-items: flex-start;
+}
+
 .answer-letter {
   font-weight: bold;
   min-width: 20px;
+  margin-top: 0.125rem;
+}
+
+.answer-text-and-image {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.answer-text {
+  line-height: 1.4;
+}
+
+.answer-preview-image {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
 }
 
 .correct-indicator {
   margin-left: auto;
   color: #22c55e;
   font-weight: bold;
+  margin-top: 0.125rem;
 }
 
 .preview-explanation {
@@ -693,7 +894,8 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.success-message {
+.success-message,
+.error-message {
   position: fixed;
   top: 0;
   left: 0;
@@ -707,7 +909,8 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.success-content {
+.success-content,
+.error-content {
   background: white;
   padding: 2rem;
   border-radius: 12px;
@@ -716,19 +919,27 @@ onMounted(() => {
   animation: slideIn 0.3s ease;
 }
 
-.success-icon {
+.success-icon,
+.error-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
 }
 
 .success-content h3 {
   margin: 0 0 0.5rem 0;
-  color: #1a202c;
+  color: #059669;
 }
 
-.success-content p {
+.error-content h3 {
+  margin: 0 0 0.5rem 0;
+  color: #dc2626;
+}
+
+.success-content p,
+.error-content p {
   margin: 0;
   color: #4a5568;
+  word-wrap: break-word;
 }
 
 @keyframes slideIn {
@@ -786,6 +997,25 @@ onMounted(() => {
 
   .correct-checkbox {
     justify-content: center;
+  }
+
+  .answer-content {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .answer-preview-image {
+    max-width: 100px;
+    max-height: 60px;
+  }
+
+  .compact-upload .upload-area {
+    min-height: 60px;
+    padding: 0.75rem;
+  }
+
+  .compact-upload .image-preview img {
+    max-height: 60px;
   }
 }
 </style>
