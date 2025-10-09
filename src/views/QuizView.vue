@@ -23,8 +23,17 @@
           <p class="encouragement">Chúc bạn hoàn thành tốt bài thi của mình!</p>
         </div>
 
+        <!-- Error Message -->
+        <div v-if="showError" class="error-message">
+          <div class="error-text">{{ errorMessage }}</div>
+          <button @click="closeError" class="close-error-btn">×</button>
+        </div>
+
         <div class="action-section">
-          <button @click="startQuiz" class="start-quiz-btn">VÀO THI</button>
+          <button @click="startQuiz" class="start-quiz-btn" :disabled="isStarting">
+            <span v-if="isStarting">Đang chuẩn bị...</span>
+            <span v-else>VÀO THI</span>
+          </button>
         </div>
 
         <div class="navigation-section">
@@ -39,8 +48,12 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { requireUserAuth, performLogout, getUser } from '@/utils/auth.js'
+import examApi from '@/api/examApi.js'
 
 const router = useRouter()
+const isStarting = ref(false)
+const errorMessage = ref('')
+const showError = ref(false)
 
 // Check authentication on component mount
 onMounted(() => {
@@ -53,9 +66,67 @@ onMounted(() => {
   }
 })
 
-const startQuiz = () => {
-  // Chuyển đến trang làm bài thi
-  router.push('/quiz-questions')
+const startQuiz = async () => {
+  isStarting.value = true
+
+  try {
+    const response = await examApi.startExam()
+
+    if (response.success) {
+      console.log('Exam started successfully:', response.data)
+
+      // Store exam data in sessionStorage for the quiz questions page
+      sessionStorage.setItem('examData', JSON.stringify(response.data))
+
+      // Navigate to quiz questions page
+      router.push('/quiz-questions')
+    } else {
+      // Handle specific error cases
+      if (response.statusCode === 400 && response.message?.includes('đã hoàn thành bài thi')) {
+        showErrorMessage(
+          'Bạn đã hoàn thành bài thi rồi, không thể thi lại! Vui lòng liên hệ ban tổ chức nếu có thắc mắc.',
+        )
+      } else {
+        throw new Error(response.message || 'Failed to start exam')
+      }
+    }
+  } catch (error) {
+    console.error('Failed to start exam:', error)
+
+    // Handle network errors or other unexpected errors
+    if (
+      error.response?.status === 400 &&
+      error.response?.data?.message?.includes('đã hoàn thành bài thi')
+    ) {
+      showErrorMessage(
+        'Bạn đã hoàn thành bài thi rồi, không thể thi lại! Vui lòng liên hệ ban tổ chức nếu có thắc mắc.',
+      )
+    } else if (error.message && !error.message.includes('Failed to start exam')) {
+      // If it's a custom error message, show it directly
+      showErrorMessage(error.message)
+    } else {
+      showErrorMessage('Có lỗi xảy ra khi bắt đầu bài thi. Vui lòng thử lại sau.')
+    }
+  } finally {
+    isStarting.value = false
+  }
+}
+
+const showErrorMessage = (message) => {
+  errorMessage.value = message
+  showError.value = true
+
+  // Auto hide after 10 seconds
+  setTimeout(() => {
+    if (showError.value) {
+      closeError()
+    }
+  }, 10000)
+}
+
+const closeError = () => {
+  showError.value = false
+  errorMessage.value = ''
 }
 
 const logout = async () => {
@@ -191,6 +262,61 @@ const logout = async () => {
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.15);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(252, 165, 165, 0.6);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: rgba(239, 68, 68, 0.95);
+  animation: slideIn 0.5s ease-out;
+  position: relative;
+}
+
+.error-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.error-text {
+  flex: 1;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.close-error-btn {
+  background: none;
+  border: none;
+  color: rgba(239, 68, 68, 0.8);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.close-error-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .logout-btn:hover {

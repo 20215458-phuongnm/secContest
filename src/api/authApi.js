@@ -13,11 +13,16 @@ const authApi = {
 
   // Refresh token
   refreshToken: (refreshToken) => {
-    return axiosClient.post('/auth/refresh', null, {
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
+    return axiosClient.post(
+      '/auth/refresh',
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${refreshToken}`,
+        },
       },
-    })
+    )
   },
 
   // Create admin user
@@ -40,6 +45,11 @@ const authApi = {
         'Content-Type': 'application/json',
       },
     })
+  },
+
+  // Select exam slot
+  selectExamSlot: (examSlotData) => {
+    return axiosClient.post('/registration/select-exam-slot', examSlotData)
   },
 }
 

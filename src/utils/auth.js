@@ -33,7 +33,15 @@ export const clearAuth = () => {
   localStorage.removeItem('accessToken')
   localStorage.removeItem('refreshToken')
   localStorage.removeItem('user')
+
+  // Stop token manager
+  import('./tokenManager.js').then(({ default: tokenManager }) => {
+    tokenManager.stopAutoRefresh()
+  })
 }
+
+// Export token helpers for axiosClient
+export { isTokenExpired, refreshAccessToken } from './tokenManager.js'
 
 export const requireAuth = () => {
   if (!isAuthenticated()) {
@@ -67,6 +75,10 @@ export const performLogout = async () => {
     console.error('Logout API error:', error)
     // Continue with logout even if API fails
   } finally {
+    // Stop token manager
+    const { default: tokenManager } = await import('./tokenManager.js')
+    tokenManager.stopAutoRefresh()
+
     // Clear authentication data
     clearAuth()
   }

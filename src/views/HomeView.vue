@@ -167,7 +167,6 @@ watch([() => form.value.username, () => form.value.password], clearError)
 
           <div class="form-links">
             <RouterLink to="/register" class="link">Đăng ký ngay!</RouterLink>
-            <a href="#" class="link" @click.prevent>Quên mật khẩu?</a>
           </div>
 
           <button type="submit" class="login-btn" :disabled="loading">

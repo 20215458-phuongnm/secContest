@@ -3,7 +3,12 @@
     <div class="quiz-body">
       <!-- Left side - Questions -->
       <div class="questions-section">
-        <div class="question-card">
+        <div v-if="questions.length === 0" class="loading-state">
+          <div class="spinner"></div>
+          <p>Đang tải câu hỏi...</p>
+        </div>
+
+        <div v-else class="question-card">
           <div class="question-number">Câu {{ currentQuestion + 1 }}:</div>
           <div
             class="question-text"
@@ -11,26 +16,37 @@
             @copy="preventCopy"
             @contextmenu="preventRightClick"
           >
-            {{ questions[currentQuestion].question }}
+            {{ questions[currentQuestion].content }}
+          </div>
+
+          <!-- Question Image -->
+          <div v-if="questions[currentQuestion].imageUrl" class="question-image">
+            <img :src="questions[currentQuestion].imageUrl" alt="Question image" />
           </div>
 
           <div class="answers-section">
             <div
               v-for="(answer, index) in questions[currentQuestion].answers"
-              :key="index"
+              :key="answer.id"
               class="answer-option"
               @click="selectAnswer(index)"
             >
               <input
                 type="radio"
-                :id="`answer-${index}`"
+                :id="`answer-${answer.id}`"
                 :name="`question-${currentQuestion}`"
                 :value="index"
-                v-model="userAnswers[currentQuestion]"
+                :checked="userAnswers[currentQuestion]?.answerIndex === index"
                 class="answer-radio"
               />
-              <label :for="`answer-${index}`" class="answer-label">
-                {{ String.fromCharCode(65 + index) }}. {{ answer }}
+              <label :for="`answer-${answer.id}`" class="answer-label">
+                {{ String.fromCharCode(65 + index) }}. {{ answer.content }}
+                <img
+                  v-if="answer.imageUrl"
+                  :src="answer.imageUrl"
+                  alt="Answer image"
+                  class="answer-image"
+                />
               </label>
             </div>
           </div>
@@ -87,10 +103,53 @@
 
         <!-- Submit Button -->
         <div class="submit-section">
-          <button @click="submitQuiz" class="submit-btn">NỘP BÀI</button>
+          <button @click="submitQuiz" class="submit-btn" :disabled="isSubmitting">
+            <span v-if="isSubmitting">
+              <span class="loading-spinner"></span>
+              Đang nộp bài...
+            </span>
+            <span v-else>NỘP BÀI</span>
+          </button>
           <div class="submit-info">
             Đã hoàn thành: {{ answeredCount }}/{{ questions.length }} câu
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Submit Modal -->
+    <div v-if="showConfirmModal" class="modal-overlay" @click="showConfirmModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>⚠️ Xác nhận nộp bài</h3>
+        </div>
+        <div class="modal-body">
+          <p>
+            Bạn còn <strong>{{ unansweredCount }}</strong> câu chưa trả lời.
+          </p>
+          <p>Bạn có chắc chắn muốn nộp bài không?</p>
+        </div>
+        <div class="modal-actions">
+          <button @click="showConfirmModal = false" class="modal-btn cancel-btn">
+            Tiếp tục làm bài
+          </button>
+          <button @click="confirmSubmit" class="modal-btn confirm-btn">Nộp bài ngay</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Up Modal -->
+    <div v-if="showTimeUpModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>⏰ Hết thời gian làm bài</h3>
+        </div>
+        <div class="modal-body">
+          <p>Thời gian làm bài đã kết thúc!</p>
+          <p>Hệ thống sẽ tự động nộp bài của bạn.</p>
+        </div>
+        <div class="modal-actions">
+          <button @click="confirmTimeUpSubmit" class="modal-btn confirm-btn">Đồng ý</button>
         </div>
       </div>
     </div>
@@ -101,23 +160,50 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { requireUserAuth, clearAuth, getUser } from '@/utils/auth.js'
+import examApi from '@/api/examApi.js'
 
 const router = useRouter()
 
 // Quiz state
 const currentQuestion = ref(0)
-const userAnswers = ref(Array(20).fill(null))
+const userAnswers = ref([])
 const timeRemaining = ref(20 * 60) // 20 minutes in seconds
 const quizTimer = ref(null)
+const examData = ref(null)
+const sessionId = ref(null)
+const isSubmitting = ref(false)
+const startTime = ref(null) // Thời gian bắt đầu bài thi
+const totalTime = ref(20 * 60) // Tổng thời gian làm bài (20 phút)
 
-// Load saved data from localStorage
+// Modal states
+const showConfirmModal = ref(false)
+const showTimeUpModal = ref(false)
+const unansweredCount = ref(0)
+
+// Load saved data from localStorage and calculate real remaining time
 const loadQuizState = () => {
   const savedState = localStorage.getItem('quizState')
   if (savedState) {
     const state = JSON.parse(savedState)
     currentQuestion.value = state.currentQuestion || 0
-    userAnswers.value = state.userAnswers || Array(20).fill(null)
-    timeRemaining.value = state.timeRemaining || 20 * 60
+    userAnswers.value = state.userAnswers || Array(questions.value.length).fill(null)
+
+    // Calculate real remaining time based on start time
+    if (state.startTime) {
+      startTime.value = state.startTime
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - startTime.value) / 1000)
+      timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds)
+
+      console.log('Quiz resumed:', {
+        startTime: new Date(startTime.value),
+        elapsed: elapsedSeconds,
+        remaining: timeRemaining.value,
+      })
+    } else {
+      // First time loading, use saved time or default
+      timeRemaining.value = state.timeRemaining || totalTime.value
+    }
   }
 }
 
@@ -127,42 +213,51 @@ const saveQuizState = () => {
     currentQuestion: currentQuestion.value,
     userAnswers: userAnswers.value,
     timeRemaining: timeRemaining.value,
+    startTime: startTime.value, // Lưu thời gian bắt đầu
+    totalTime: totalTime.value,
     lastSaved: Date.now(),
   }
   localStorage.setItem('quizState', JSON.stringify(state))
 }
 
-// Sample questions - trong thực tế sẽ lấy từ API
-const questions = ref([
-  {
-    question: 'Thời gian nắm giữ vốn đối với quyết định đầu tư dài hạn như thế nào?',
-    answers: ['Từ 1 năm', 'Từ 3 năm', 'Từ 5 năm', 'Không hạn chế theo thời gian'],
-  },
-  {
-    question: 'Yếu tố ảnh hưởng đến giá trị thị trường và việc đầu tư doanh nghiệp hiện tại?',
-    answers: ['Pháp luật', 'Kỹ thuật', 'Thông tin', 'Tất cả đều đúng'],
-  },
-  {
-    question:
-      'Thông tin định lượng thường phản ánh điều gì về thị trường, việc đầu tư hay không được chia sẻ với công ty cụ thể cho thấy ở phần nào?',
-    answers: [
-      'Báo cáo tài chính của các doanh nghiệp',
-      'Báo cáo thường niên',
-      'Báo cáo tài chính doanh nghiệp',
-      'Báo cáo về tình hình tài chính',
-    ],
-  },
-  // Add more questions as needed... for demo, I'll create 20 sample questions
-  ...Array.from({ length: 17 }, (_, i) => ({
-    question: `Câu hỏi mẫu số ${i + 4} về kinh tế, tài chính, hoặc IQ. Đây là nội dung câu hỏi để test giao diện?`,
-    answers: [
-      `Đáp án A cho câu ${i + 4}`,
-      `Đáp án B cho câu ${i + 4}`,
-      `Đáp án C cho câu ${i + 4}`,
-      `Đáp án D cho câu ${i + 4}`,
-    ],
-  })),
-])
+// Questions from API
+const questions = ref([])
+
+// Load exam data from sessionStorage
+const loadExamData = () => {
+  const savedExamData = sessionStorage.getItem('examData')
+  if (!savedExamData) {
+    alert('Không tìm thấy dữ liệu bài thi. Vui lòng bắt đầu lại.')
+    router.push('/quiz')
+    return
+  }
+
+  try {
+    examData.value = JSON.parse(savedExamData)
+    sessionId.value = examData.value.sessionId
+    questions.value = examData.value.questions || []
+
+    // Initialize user answers array
+    userAnswers.value = Array(questions.value.length).fill(null)
+
+    // Set total time from exam data or default to 20 minutes
+    totalTime.value = examData.value.duration ? examData.value.duration * 60 : 20 * 60
+
+    // Check if this is a new exam (no saved state) - set start time
+    const savedState = localStorage.getItem('quizState')
+    if (!savedState || !JSON.parse(savedState).startTime) {
+      startTime.value = Date.now()
+      timeRemaining.value = totalTime.value
+      console.log('New exam started at:', new Date(startTime.value))
+    }
+
+    console.log('Loaded exam data:', examData.value)
+  } catch (error) {
+    console.error('Error parsing exam data:', error)
+    alert('Dữ liệu bài thi không hợp lệ. Vui lòng bắt đầu lại.')
+    router.push('/quiz')
+  }
+}
 
 // Computed properties
 const answeredCount = computed(() => {
@@ -177,7 +272,16 @@ const formatTime = (seconds) => {
 }
 
 const selectAnswer = (answerIndex) => {
-  userAnswers.value[currentQuestion.value] = answerIndex
+  const questionData = questions.value[currentQuestion.value]
+  const selectedAnswer = questionData.answers[answerIndex]
+
+  // Store both answer index and answer ID for API submission
+  userAnswers.value[currentQuestion.value] = {
+    answerIndex: answerIndex,
+    answerId: selectedAnswer.id,
+    questionId: questionData.id,
+  }
+
   saveQuizState()
 }
 
@@ -200,66 +304,160 @@ const nextQuestion = () => {
   }
 }
 
-const submitQuiz = () => {
+const submitQuiz = async () => {
   const unansweredQuestions = userAnswers.value.filter((answer) => answer === null).length
 
   if (unansweredQuestions > 0) {
-    const confirm = window.confirm(
-      `Bạn còn ${unansweredQuestions} câu chưa trả lời. Bạn có chắc chắn muốn nộp bài?`,
-    )
-    if (!confirm) return
+    unansweredCount.value = unansweredQuestions
+    showConfirmModal.value = true
+    return
   }
 
-  // Clear timer
-  if (quizTimer.value) {
-    clearInterval(quizTimer.value)
-  }
+  // If all questions answered, submit directly
+  await performSubmit()
+}
 
-  // Save quiz results for potential review
-  const quizResults = {
-    userAnswers: userAnswers.value,
-    answeredCount: answeredCount.value,
-    totalQuestions: questions.value.length,
-    submissionTime: new Date().toISOString(),
+const confirmSubmit = async () => {
+  showConfirmModal.value = false
+  await performSubmit()
+}
+
+const confirmTimeUpSubmit = async () => {
+  showTimeUpModal.value = false
+
+  try {
+    // Call submit exam API for time up case
+    const answers = userAnswers.value
+      .map((answer, index) => {
+        if (answer && answer.answerId && answer.questionId) {
+          return {
+            questionId: answer.questionId,
+            answerId: answer.answerId,
+          }
+        }
+        return null
+      })
+      .filter((answer) => answer !== null)
+
+    const examSubmissionData = {
+      sessionId: sessionId.value,
+      answers: answers,
+    }
+
+    const response = await examApi.submitExam(examSubmissionData)
+
+    if (response.success) {
+      // Save quiz results for display on results page
+      const quizResults = {
+        ...response.data,
+        userAnswers: userAnswers.value,
+        submissionTime: new Date().toISOString(),
+        autoSubmitted: true,
+      }
+      sessionStorage.setItem('quizResults', JSON.stringify(quizResults))
+    }
+  } catch (error) {
+    console.error('Failed to submit exam on timeout:', error)
+    // Still proceed to results even if API fails
+    const quizResults = {
+      userAnswers: userAnswers.value,
+      answeredCount: answeredCount.value,
+      totalQuestions: questions.value.length,
+      submissionTime: new Date().toISOString(),
+      autoSubmitted: true,
+    }
+    sessionStorage.setItem('quizResults', JSON.stringify(quizResults))
   }
-  localStorage.setItem('quizResults', JSON.stringify(quizResults))
 
   // Clear saved quiz state after submission
   localStorage.removeItem('quizState')
+  sessionStorage.removeItem('examData')
 
   // Redirect to results page
   router.push('/quiz-result')
 }
 
-const startTimer = () => {
-  quizTimer.value = setInterval(() => {
-    timeRemaining.value--
-    saveQuizState() // Save time every second
+const performSubmit = async () => {
+  isSubmitting.value = true
 
-    if (timeRemaining.value <= 0) {
-      // Auto submit when time is up
-      alert('Hết thời gian làm bài! Hệ thống sẽ tự động nộp bài.')
+  try {
+    // Prepare answers for API submission
+    const answers = userAnswers.value
+      .map((answer, index) => {
+        if (answer && answer.answerId && answer.questionId) {
+          return {
+            questionId: answer.questionId,
+            answerId: answer.answerId,
+          }
+        }
+        return null
+      })
+      .filter((answer) => answer !== null)
+
+    const examSubmissionData = {
+      sessionId: sessionId.value,
+      answers: answers,
+    }
+
+    console.log('Submitting exam:', examSubmissionData)
+
+    const response = await examApi.submitExam(examSubmissionData)
+
+    if (response.success) {
+      console.log('Exam submitted successfully:', response.data)
 
       // Clear timer
       if (quizTimer.value) {
         clearInterval(quizTimer.value)
       }
 
-      // Save quiz results for potential review
+      // Save quiz results for display on results page
       const quizResults = {
+        ...response.data,
         userAnswers: userAnswers.value,
-        answeredCount: answeredCount.value,
-        totalQuestions: questions.value.length,
         submissionTime: new Date().toISOString(),
-        autoSubmitted: true,
       }
-      localStorage.setItem('quizResults', JSON.stringify(quizResults))
+      sessionStorage.setItem('quizResults', JSON.stringify(quizResults))
 
-      // Clear saved quiz state after submission
+      // Clear saved quiz state and exam data after submission
       localStorage.removeItem('quizState')
+      sessionStorage.removeItem('examData')
 
       // Redirect to results page
       router.push('/quiz-result')
+    } else {
+      throw new Error(response.message || 'Failed to submit exam')
+    }
+  } catch (error) {
+    console.error('Failed to submit exam:', error)
+    alert('Có lỗi xảy ra khi nộp bài. Vui lòng thử lại.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const startTimer = () => {
+  quizTimer.value = setInterval(() => {
+    // Calculate real-time remaining based on start time
+    if (startTime.value) {
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - startTime.value) / 1000)
+      timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds)
+    } else {
+      // Fallback to old method if no start time
+      timeRemaining.value--
+    }
+
+    saveQuizState() // Save state every second
+
+    if (timeRemaining.value <= 0) {
+      // Clear timer first
+      if (quizTimer.value) {
+        clearInterval(quizTimer.value)
+      }
+
+      // Show time up modal
+      showTimeUpModal.value = true
     }
   }, 1000)
 }
@@ -293,10 +491,28 @@ onMounted(() => {
     return
   }
 
-  // Load saved quiz state first
+  // Load exam data from sessionStorage first
+  loadExamData()
+
+  // Load saved quiz state after loading exam data (this will calculate real remaining time)
   loadQuizState()
 
+  // Start timer with real-time calculation
   startTimer()
+
+  // Sync time when user comes back to tab
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && startTime.value) {
+      // Recalculate time when tab becomes visible
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - startTime.value) / 1000)
+      timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds)
+      console.log('Tab visible - time synced:', {
+        elapsed: elapsedSeconds,
+        remaining: timeRemaining.value,
+      })
+    }
+  })
 
   // Disable text selection globally
   document.addEventListener('selectstart', preventSelection)
@@ -313,6 +529,7 @@ onUnmounted(() => {
   document.removeEventListener('selectstart', preventSelection)
   document.removeEventListener('copy', preventCopy)
   document.removeEventListener('contextmenu', preventRightClick)
+  document.removeEventListener('visibilitychange', () => {})
 })
 </script>
 
@@ -426,6 +643,59 @@ onUnmounted(() => {
   line-height: 1.5;
   color: #2c3e50;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Loading state */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Question image */
+.question-image {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.question-image img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Answer image */
+.answer-image {
+  max-width: 200px;
+  max-height: 100px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 0.5rem;
 }
 
 .question-navigation {
@@ -561,9 +831,26 @@ onUnmounted(() => {
   margin-bottom: 1rem;
 }
 
-.submit-btn:hover {
+.submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.submit-btn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
 }
 
 .submit-info {
@@ -777,6 +1064,140 @@ onUnmounted(() => {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
     min-width: 70px;
+  }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  max-width: 450px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+.modal-header {
+  padding: 1.5rem 1.5rem 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  text-align: center;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.modal-body p {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+}
+
+.modal-body strong {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.modal-actions {
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.modal-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.cancel-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.cancel-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.confirm-btn {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+}
+
+.confirm-btn:hover {
+  background: linear-gradient(135deg, #b91c1c, #991b1b);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 480px) {
+  .modal-content {
+    margin: 1rem;
+    width: calc(100% - 2rem);
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-btn {
+    width: 100%;
+    min-width: auto;
   }
 }
 

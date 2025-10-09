@@ -10,21 +10,49 @@
         </p>
 
         <div class="info-content">
-          <p class="info-title">Vòng 2 Bản Lĩnh Nhà Đầu Tư 2025 sẽ gồm các ca thi sau:</p>
+          <p class="info-title">Vui lòng chọn ca thi cho Vòng 2 Bản Lĩnh Nhà Đầu Tư 2025:</p>
 
           <div class="schedule-box">
-            <div class="schedule-item">CA 1: 08h30 - 09h30 ngày 26/10/2025</div>
-            <div class="schedule-item">CA 2: 10h15 - 11h15 ngày 26/10/2025</div>
-            <div class="schedule-item">CA 3: 14h00 - 15h00 ngày 26/10/2025</div>
-            <div class="schedule-item">CA 4: 15h45 - 16h45 ngày 26/10/2025</div>
+            <div
+              v-for="slot in examSlots"
+              :key="slot"
+              :class="['schedule-item', 'selectable', { selected: selectedSlot === slot }]"
+              @click="selectSlot(slot)"
+            >
+              <input
+                type="radio"
+                :id="slot"
+                :value="slot"
+                v-model="selectedSlot"
+                class="slot-radio"
+              />
+              <label :for="slot" class="slot-label">{{ slot }}</label>
+            </div>
           </div>
 
           <p class="closing-text">
             <em>Hẹn gặp lại bạn ở Vòng 2: Test sơ loại Cuộc thi Bản lĩnh nhà đầu tư 2025!</em>
           </p>
         </div>
+
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="error-message">⚠️ {{ errorMessage }}</div>
+
+        <!-- Success Message -->
+        <div v-if="showSuccess" class="success-message">
+          Chọn ca thi thành công! Đang chuyển hướng...
+        </div>
+
         <div class="action-buttons">
-          <button @click="goHome" class="back-to-login-btn">HOÀN THÀNH</button>
+          <button
+            @click="submitSlotSelection"
+            :disabled="isSubmitting || showSuccess"
+            class="back-to-login-btn"
+          >
+            <span v-if="isSubmitting">Đang xử lý...</span>
+            <span v-else-if="showSuccess">Thành công!</span>
+            <span v-else>HOÀN THÀNH</span>
+          </button>
         </div>
       </div>
     </div>
@@ -32,11 +60,24 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { requireUserAuth, performLogout, getUser } from '@/utils/auth.js'
+import authApi from '@/api/authApi.js'
 
 const router = useRouter()
+const selectedSlot = ref('')
+const isSubmitting = ref(false)
+const showSuccess = ref(false)
+const errorMessage = ref('')
+
+// Available exam slots
+const examSlots = [
+  'CA 1: 08h30 - 09h30 ngày 25/10/2025',
+  'CA 2: 10h15 - 11h15 ngày 25/10/2025',
+  'CA 3: 14h00 - 15h00 ngày 25/10/2025',
+  'CA 4: 15h45 - 16h45 ngày 25/10/2025',
+]
 
 // Check authentication on component mount
 onMounted(() => {
@@ -48,6 +89,44 @@ onMounted(() => {
     router.push('/')
   }
 })
+
+const selectSlot = (slot) => {
+  selectedSlot.value = slot
+  errorMessage.value = ''
+}
+
+const submitSlotSelection = async () => {
+  if (!selectedSlot.value) {
+    errorMessage.value = 'Vui lòng chọn ca thi trước khi hoàn thành!'
+    return
+  }
+
+  isSubmitting.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await authApi.selectExamSlot({
+      examSlot: selectedSlot.value,
+    })
+
+    if (response.success) {
+      console.log('Chọn ca thi thành công:', response.data)
+      showSuccess.value = true
+
+      // Wait 2 seconds then redirect
+      setTimeout(() => {
+        goHome()
+      }, 2000)
+    } else {
+      throw new Error(response.message || 'Không thể chọn ca thi')
+    }
+  } catch (error) {
+    console.error('Lỗi chọn ca thi:', error)
+    errorMessage.value = error.message || 'Có lỗi xảy ra khi chọn ca thi. Vui lòng thử lại.'
+  } finally {
+    isSubmitting.value = false
+  }
+}
 
 const goHome = async () => {
   // Clear any remaining quiz data
@@ -215,6 +294,45 @@ const goHome = async () => {
   margin-bottom: 0;
 }
 
+/* Selectable schedule items */
+.schedule-item.selectable {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.schedule-item.selectable:hover {
+  background: rgba(100, 181, 246, 0.15);
+  border-color: rgba(100, 181, 246, 0.5);
+  transform: translateX(8px);
+}
+
+.schedule-item.selected {
+  background: rgba(100, 181, 246, 0.25) !important;
+  border-color: rgba(100, 181, 246, 0.7) !important;
+  box-shadow: 0 0 15px rgba(100, 181, 246, 0.3);
+  transform: translateX(5px);
+}
+
+.slot-radio {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #64b5f6;
+  cursor: pointer;
+}
+
+.slot-label {
+  flex: 1;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #ffffff;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+  font-weight: 500;
+}
+
 .closing-text {
   text-align: center;
   font-size: 1rem;
@@ -243,11 +361,54 @@ const goHome = async () => {
   cursor: pointer;
 }
 
-.back-to-login-btn:hover {
+.back-to-login-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.back-to-login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Message styles */
+.error-message {
+  background: rgba(239, 68, 68, 0.15);
+  border: 2px solid rgba(252, 165, 165, 0.6);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+  color: rgba(239, 68, 68, 0.95);
+  font-size: 1rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.success-message {
+  background: rgba(34, 197, 94, 0.15);
+  border: 2px solid rgba(134, 239, 172, 0.6);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+  color: rgba(34, 197, 94, 0.95);
+  font-size: 1rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -286,6 +447,17 @@ const goHome = async () => {
     padding: 0.5rem 0.8rem;
   }
 
+  .slot-label {
+    font-size: 0.85rem;
+  }
+
+  .error-message,
+  .success-message {
+    font-size: 0.9rem;
+    margin: 0.8rem 0;
+    padding: 0.8rem;
+  }
+
   .closing-text {
     font-size: 0.9rem;
   }
@@ -321,6 +493,22 @@ const goHome = async () => {
     font-size: 0.8rem;
     margin-bottom: 0.4rem;
     padding: 0.4rem 0.6rem;
+  }
+
+  .slot-label {
+    font-size: 0.8rem;
+  }
+
+  .slot-radio {
+    width: 16px;
+    height: 16px;
+  }
+
+  .error-message,
+  .success-message {
+    font-size: 0.85rem;
+    margin: 0.6rem 0;
+    padding: 0.6rem;
   }
 
   .back-to-login-btn {

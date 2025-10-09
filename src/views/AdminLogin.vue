@@ -33,7 +33,6 @@
             <input type="checkbox" id="remember" v-model="form.remember" />
             <label for="remember">Ghi nhớ đăng nhập</label>
           </div>
-          <a href="#" class="forgot-password">Quên mật khẩu?</a>
         </div>
 
         <div v-if="error" class="error-message">
@@ -129,6 +128,10 @@ const handleLogin = async () => {
       // Store legacy admin session (backward compatibility)
       localStorage.setItem('adminLoggedIn', 'true')
       localStorage.setItem('adminEmail', user.email)
+
+      // Start automatic token refresh
+      const { default: tokenManager } = await import('@/utils/tokenManager.js')
+      tokenManager.startAutoRefresh()
 
       loading.value = false
       success.value = 'Đăng nhập thành công!'

@@ -26,7 +26,7 @@
         </RouterLink>
         <RouterLink to="/admin/upload" class="nav-item">
           <span class="nav-icon"></span>
-          Upload câu hỏi
+          Tạo câu hỏi
         </RouterLink>
       </div>
     </nav>
@@ -82,7 +82,6 @@
           <div v-else-if="questions.length === 0" class="empty-state">
             <h4>Chưa có câu hỏi nào</h4>
             <p>Hãy tạo câu hỏi đầu tiên của bạn</p>
-            <RouterLink to="/admin/upload" class="add-question-btn">Tạo câu hỏi</RouterLink>
           </div>
 
           <!-- Questions Table -->
