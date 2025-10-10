@@ -237,11 +237,8 @@ const question = ref({
 // Computed
 const isFormValid = computed(() => {
   const hasContent = question.value.content.trim().length > 0
-  const hasValidAnswers =
-    question.value.answers.filter((a) => a.content.trim() || a.image).length >= 2
-  const hasCorrectAnswer = question.value.answers.some(
-    (a) => a.isCorrect && (a.content.trim() || a.image),
-  )
+  const hasValidAnswers = question.value.answers.filter((a) => a.content.trim()).length >= 2
+  const hasCorrectAnswer = question.value.answers.some((a) => a.isCorrect && a.content.trim())
   return hasContent && hasValidAnswers && hasCorrectAnswer
 })
 
