@@ -1002,12 +1002,15 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.question-thumbnail {
-  width: 80px;
-  height: 50px;
-  object-fit: cover;
+.question-thumbnail,
+.answer-thumbnail,
+.preview-image,
+.preview-image-small {
+  max-width: 100%;
+  height: auto;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  margin: 1rem 0;
+  max-height: 300px; /* Increased height for better visibility */
 }
 
 .answers-preview {
