@@ -124,13 +124,6 @@
             <!-- Form Actions -->
             <div class="form-actions">
               <button type="button" @click="resetForm" class="reset-btn">Làm mới</button>
-              <button type="submit" :disabled="!isFormValid || isSaving" class="save-btn">
-                <span v-if="isSaving" class="loading-content">
-                  <span class="spinner"></span>
-                  {{ uploadProgress || 'Đang lưu...' }}
-                </span>
-                <span v-else>Lưu câu hỏi</span>
-              </button>
               <button
                 type="button"
                 @click="saveAndCreateNew"
@@ -244,8 +237,11 @@ const question = ref({
 // Computed
 const isFormValid = computed(() => {
   const hasContent = question.value.content.trim().length > 0
-  const hasValidAnswers = question.value.answers.filter((a) => a.content.trim()).length >= 2
-  const hasCorrectAnswer = question.value.answers.some((a) => a.isCorrect && a.content.trim())
+  const hasValidAnswers =
+    question.value.answers.filter((a) => a.content.trim() || a.image).length >= 2
+  const hasCorrectAnswer = question.value.answers.some(
+    (a) => a.isCorrect && (a.content.trim() || a.image),
+  )
   return hasContent && hasValidAnswers && hasCorrectAnswer
 })
 

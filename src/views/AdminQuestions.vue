@@ -420,8 +420,10 @@ const canSave = computed(() => {
   if (!editingQuestion.value || !editingQuestion.value.content) return false
   if (!editingQuestion.value.answers || editingQuestion.value.answers.length < 4) return false
 
-  // Check if all answers have content
-  return editingQuestion.value.answers.every((answer) => answer.content && answer.content.trim())
+  // Check if all answers have either content or image
+  return editingQuestion.value.answers.every(
+    (answer) => (answer.content && answer.content.trim()) || answer.imageUrl,
+  )
 })
 
 // Methods
@@ -1392,11 +1394,11 @@ onMounted(() => {
 }
 
 .preview-image {
-  width: 120px;
-  height: 80px;
-  object-fit: cover;
+  max-width: 100%;
+  height: auto;
   border-radius: 6px;
-  border: 1px solid #d1d5db;
+  margin: 1rem 0;
+  max-height: 300px; /* Increased height for better visibility */
 }
 
 .preview-image-small {
