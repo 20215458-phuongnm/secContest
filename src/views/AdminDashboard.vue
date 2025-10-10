@@ -69,7 +69,7 @@
           </div>
         </div>
         <img 
-  src="https://sec-com.s3.ap-southeast-1.amazonaws.com/questions/1760025078335-test.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIA2AUOOY35E32R24VB%2F20251009%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Date=20251009T155119Z&X-Amz-Expires=3600&X-Amz-Signature=180957fe9763c79a7b2e5fd4e5fb3fe18c5aaaf6419e23d491d1d66fba68743c&X-Amz-SignedHeaders=host" 
+  src="https://blndt.s3.ap-southeast-1.amazonaws.com/questions/1760025078335-test.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIA2AUOOY35E32R24VB%2F20251009%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Date=20251009T155119Z&X-Amz-Expires=3600&X-Amz-Signature=180957fe9763c79a7b2e5fd4e5fb3fe18c5aaaf6419e23d491d1d66fba68743c&X-Amz-SignedHeaders=host" 
   alt="Question image" 
   style="max-width: 100%; height: auto;"
 />

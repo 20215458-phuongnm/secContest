@@ -142,7 +142,7 @@
     <div v-if="showTimeUpModal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>⏰ Hết thời gian làm bài</h3>
+          <h3>Hết thời gian làm bài</h3>
         </div>
         <div class="modal-body">
           <p>Thời gian làm bài đã kết thúc!</p>
@@ -536,10 +536,8 @@ onUnmounted(() => {
 <style scoped>
 .quiz-questions {
   min-height: 100vh;
-  background: url('../assets/desktopback.png');
+  background: url('../assets/desktopback.png') no-repeat center center fixed;
   background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
   padding: 1rem;
   user-select: none; /* Prevent text selection */
 }
