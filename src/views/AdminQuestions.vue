@@ -1006,11 +1006,11 @@ onMounted(() => {
 .answer-thumbnail,
 .preview-image,
 .preview-image-small {
-  max-width: 100%;
+  max-width: 500px; /* Explicitly set larger width */
   height: auto;
   border-radius: 6px;
   margin: 1rem 0;
-  max-height: 300px; /* Increased height for better visibility */
+  max-height: 400px; /* Explicitly set larger height */
 }
 
 .answers-preview {
