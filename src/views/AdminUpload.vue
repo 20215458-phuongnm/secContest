@@ -3,7 +3,7 @@
     <header class="dashboard-header">
       <div class="header-content">
         <div class="header-left">
-          <h1>Tạo Câu Hỏi</h1>
+          <h1>Tạo Bộ Đề</h1>
         </div>
         <div class="header-right">
           <div class="admin-info">
@@ -26,157 +26,111 @@
         </RouterLink>
         <RouterLink to="/admin/upload" class="nav-item active">
           <span class="nav-icon"></span>
-          Tạo câu hỏi
+          Tạo bộ đề
         </RouterLink>
       </div>
     </nav>
 
     <main class="dashboard-main">
-      <div class="question-form-container">
-        <!-- Question Form -->
+      <div class="question-set-form-container">
         <div class="form-section">
-          <form @submit.prevent="saveQuestion" class="question-form">
-            <!-- Question Content -->
+          <form @submit.prevent="submitQuestionSet" class="question-set-form">
             <div class="form-group">
-              <label for="question">Nội dung câu hỏi *</label>
-              <textarea
-                id="question"
-                v-model="question.content"
-                required
-                placeholder="Nhập nội dung câu hỏi..."
-                rows="4"
-              ></textarea>
+              <label for="setName">Tên bộ đề *</label>
+              <input id="setName" v-model="setName" required placeholder="Nhập tên bộ đề..." />
             </div>
-
-            <!-- Question Image -->
-            <div class="form-group">
-              <label>Ảnh kèm theo</label>
-              <FileUpload
-                v-model="question.image"
-                accept="image/*"
-                title="Tải ảnh lên"
-                supportedFormats="Hỗ trợ: JPG, PNG, GIF (tối đa 5MB)"
-                :maxSize="5 * 1024 * 1024"
-                @preview="question.imagePreview = $event"
-              />
-            </div>
-
-            <!-- Answer Options -->
-            <div class="form-group">
-              <label>Đáp án</label>
-              <div class="answers-container">
-                <div v-for="(answer, index) in question.answers" :key="index" class="answer-item">
-                  <div class="answer-header">
-                    <span class="answer-label">Đáp án {{ index + 1 }}</span>
-                    <button
-                      v-if="question.answers.length > 2"
-                      type="button"
-                      @click="removeAnswer(index)"
-                      class="remove-answer-btn"
-                    >
-                      ❌
-                    </button>
-                  </div>
-                  <div class="answer-input-group">
-                    <input
-                      v-model="answer.content"
-                      type="text"
-                      :placeholder="`Nhập đáp án ${index + 1}...`"
-                      required
-                    />
-                    <label class="correct-checkbox">
-                      <input
-                        v-model="answer.isCorrect"
-                        type="checkbox"
-                        @change="validateCorrectAnswers"
-                      />
-                      <span class="checkmark">✓</span>
-                      Đúng
-                    </label>
-                  </div>
-
-                  <!-- Answer Image Upload -->
-                  <div class="answer-image-upload">
-                    <label class="answer-image-label">Ảnh đáp án (tùy chọn)</label>
+            <div class="questions-list">
+              <div v-for="(q, qIdx) in questions" :key="qIdx" class="question-block">
+                <div class="question-header">
+                  <span class="question-number">Câu {{ qIdx + 1 }}</span>
+                </div>
+                <div class="form-group">
+                  <label>Nội dung câu hỏi *</label>
+                  <textarea
+                    v-model="q.content"
+                    required
+                    placeholder="Nhập nội dung câu hỏi..."
+                    rows="2"
+                  ></textarea>
+                </div>
+                <div class="form-group">
+                  <button
+                    type="button"
+                    class="toggle-image-btn"
+                    @click="q.showImage = !q.showImage"
+                  >
+                    <span v-if="!q.showImage">+ Thêm ảnh cho câu hỏi</span>
+                    <span v-else>Ẩn ảnh câu hỏi</span>
+                  </button>
+                  <div v-if="q.showImage" class="question-image-upload">
                     <FileUpload
-                      v-model="answer.image"
+                      v-model="q.image"
                       accept="image/*"
-                      :title="`Tải ảnh đáp án ${index + 1}`"
-                      supportedFormats="JPG, PNG, GIF (tối đa 2MB)"
-                      :maxSize="2 * 1024 * 1024"
-                      @preview="answer.imagePreview = $event"
-                      class="compact-upload"
+                      title="Tải ảnh câu hỏi"
+                      supportedFormats="JPG, PNG, GIF (tối đa 5MB)"
+                      :maxSize="5 * 1024 * 1024"
+                      @preview="q.imagePreview = $event"
                     />
                   </div>
                 </div>
-
-                <button
-                  v-if="question.answers.length < 6"
-                  type="button"
-                  @click="addAnswer"
-                  class="add-answer-btn"
-                >
-                  Thêm đáp án
-                </button>
+                <div class="answers-list">
+                  <div v-for="(a, aIdx) in q.answers" :key="aIdx" class="answer-item">
+                    <div class="answer-header">
+                      <span class="answer-label">Đáp án {{ String.fromCharCode(65 + aIdx) }}</span>
+                      <label class="correct-checkbox">
+                        <input
+                          type="radio"
+                          :name="'correct-' + qIdx"
+                          v-model="q.correctIndex"
+                          :value="aIdx"
+                        />
+                        <span class="checkmark">✓</span> Đúng
+                      </label>
+                    </div>
+                    <div class="answer-input-group">
+                      <input
+                        v-model="a.content"
+                        type="text"
+                        required
+                        :placeholder="`Nhập đáp án ${String.fromCharCode(65 + aIdx)}...`"
+                      />
+                    </div>
+                    <div class="answer-image-toggle">
+                      <button
+                        type="button"
+                        class="toggle-image-btn"
+                        @click="a.showImage = !a.showImage"
+                      >
+                        <span v-if="!a.showImage">+ Thêm ảnh đáp án</span>
+                        <span v-else>Ẩn ảnh đáp án</span>
+                      </button>
+                      <div v-if="a.showImage" class="answer-image-upload">
+                        <FileUpload
+                          v-model="a.image"
+                          accept="image/*"
+                          :title="`Tải ảnh đáp án ${String.fromCharCode(65 + aIdx)}`"
+                          supportedFormats="JPG, PNG, GIF (tối đa 2MB)"
+                          :maxSize="2 * 1024 * 1024"
+                          @preview="a.imagePreview = $event"
+                          class="compact-upload"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <!-- Form Actions -->
             <div class="form-actions">
               <button type="button" @click="resetForm" class="reset-btn">Làm mới</button>
-              <button
-                type="button"
-                @click="saveAndCreateNew"
-                :disabled="!isFormValid || isSaving"
-                class="save-new-btn"
-              >
+              <button type="submit" :disabled="isSaving" class="save-btn">
                 <span v-if="isSaving" class="loading-content">
                   <span class="spinner"></span>
                   {{ uploadProgress || 'Đang lưu...' }}
                 </span>
-                <span v-else>Lưu & Tạo mới</span>
+                <span v-else>Tạo bộ đề</span>
               </button>
             </div>
           </form>
-        </div>
-
-        <!-- Preview Section -->
-        <div class="preview-section">
-          <h3>Xem trước</h3>
-          <div class="question-preview">
-            <div v-if="question.content" class="preview-question">
-              <h4>{{ question.content }}</h4>
-              <img
-                v-if="question.imagePreview"
-                :src="question.imagePreview"
-                alt="Question image"
-                class="preview-image"
-              />
-            </div>
-
-            <div v-if="question.answers.some((a) => a.content.trim())" class="preview-answers">
-              <div
-                v-for="(answer, index) in question.answers.filter((a) => a.content.trim())"
-                :key="index"
-                class="preview-answer"
-                :class="{ correct: answer.isCorrect }"
-              >
-                <div class="answer-content">
-                  <span class="answer-letter">{{ String.fromCharCode(65 + index) }}.</span>
-                  <div class="answer-text-and-image">
-                    <span class="answer-text">{{ answer.content }}</span>
-                    <img
-                      v-if="answer.imagePreview"
-                      :src="answer.imagePreview"
-                      alt="Answer image"
-                      class="answer-preview-image"
-                    />
-                  </div>
-                </div>
-                <span v-if="answer.isCorrect" class="correct-indicator">✓</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </main>
@@ -185,8 +139,8 @@
     <div v-if="showSuccess" class="success-message" @click="showSuccess = false">
       <div class="success-content">
         <div class="success-icon">✅</div>
-        <h3>Tạo câu hỏi thành công!</h3>
-        <p>Câu hỏi đã được lưu vào hệ thống.</p>
+        <h3>Tạo bộ đề thành công!</h3>
+        <p>Bộ đề đã được lưu vào hệ thống.</p>
       </div>
     </div>
 
@@ -194,7 +148,7 @@
     <div v-if="showError" class="error-message" @click="showError = false">
       <div class="error-content">
         <div class="error-icon">❌</div>
-        <h3>Lỗi khi tạo câu hỏi!</h3>
+        <h3>Lỗi khi tạo bộ đề!</h3>
         <p>{{ errorMessage }}</p>
       </div>
     </div>
@@ -209,149 +163,115 @@ import FileUpload from '@/components/FileUpload.vue'
 import questionApi from '@/api/questionApi.js'
 
 const router = useRouter()
-
-// Refs
 const adminEmail = ref('')
 const isSaving = ref(false)
 const showSuccess = ref(false)
 const errorMessage = ref('')
 const showError = ref(false)
 const uploadProgress = ref('')
+const triedSubmit = ref(false)
 
-// Question data
-const question = ref({
-  content: '',
-  image: null,
-  imagePreview: null,
-  answers: [
-    { content: '', isCorrect: false, image: null, imagePreview: null },
-    { content: '', isCorrect: false, image: null, imagePreview: null },
-  ],
-  category: 'Toán',
-  difficulty: 'Trung bình',
-  grade: 10,
-  points: 10,
-  explanation: '',
+function makeQuestion() {
+  return {
+    content: '',
+    image: null,
+    imagePreview: null,
+    showImage: false,
+    correctIndex: 0,
+    answers: Array.from({ length: 4 }, (_, i) => ({
+      content: '',
+      image: null,
+      imagePreview: null,
+      showImage: false,
+      order: i,
+    })),
+  }
+}
+
+const setName = ref('')
+const questions = ref(Array.from({ length: 20 }, makeQuestion))
+
+const isSetFormValid = computed(() => {
+  if (!setName.value.trim()) return false
+  for (const q of questions.value) {
+    if (!q.content.trim()) return false
+    if (!q.answers.every((a) => a.content.trim() || a.image)) return false
+    if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex > 3) return false
+  }
+  return true
 })
 
-// Computed
-const isFormValid = computed(() => {
-  const hasContent = question.value.content.trim().length > 0
-  const hasValidAnswers = question.value.answers.filter((a) => a.content.trim()).length >= 2
-  const hasCorrectAnswer = question.value.answers.some((a) => a.isCorrect && a.content.trim())
-  return hasContent && hasValidAnswers && hasCorrectAnswer
-})
+const isSetNameInvalid = computed(() => triedSubmit.value && !setName.value.trim())
+const isQuestionInvalid = (q) => triedSubmit.value && !q.content.trim()
+const isAnswerInvalid = (a) => triedSubmit.value && !(a.content.trim() || a.image)
 
-// Methods
+const resetForm = () => {
+  setName.value = ''
+  questions.value = Array.from({ length: 20 }, makeQuestion)
+}
+
 const logout = async () => {
-  // Call logout API and clear auth
   await performLogout()
-
-  // Clear old admin session data (backward compatibility)
   localStorage.removeItem('adminLoggedIn')
   localStorage.removeItem('adminEmail')
-
-  // Redirect to admin login
   router.push('/admin')
 }
 
-// Image handling is now managed by FileUpload component
-
-const addAnswer = () => {
-  if (question.value.answers.length < 6) {
-    question.value.answers.push({ content: '', isCorrect: false, image: null, imagePreview: null })
-  }
+const uploadImageIfNeeded = async (file) => {
+  if (!file) return null
+  const res = await questionApi.uploadQuestionImage(file)
+  return res.data?.imageUrl || null
 }
 
-const removeAnswer = (index) => {
-  if (question.value.answers.length > 2) {
-    question.value.answers.splice(index, 1)
-  }
-}
-
-const validateCorrectAnswers = () => {
-  // Ensure at least one correct answer
-  const hasCorrect = question.value.answers.some((a) => a.isCorrect)
-  if (!hasCorrect && question.value.answers.length > 0) {
-    // If no correct answer, make first non-empty answer correct
-    const firstNonEmpty = question.value.answers.find((a) => a.content.trim())
-    if (firstNonEmpty) {
-      firstNonEmpty.isCorrect = true
-    }
-  }
-}
-
-const saveQuestion = async () => {
-  if (!isFormValid.value) return
-
+const submitQuestionSet = async () => {
+  triedSubmit.value = true
+  if (!isSetFormValid.value) return
   isSaving.value = true
   showError.value = false
-
+  uploadProgress.value = ''
   try {
-    // 1. Upload main question image if exists
-    let questionImageUrl = null
-    if (question.value.image) {
-      uploadProgress.value = 'Đang tải ảnh câu hỏi...'
-      console.log('Uploading question image:', question.value.image.name)
-      const imageResponse = await questionApi.uploadQuestionImage(question.value.image)
-      questionImageUrl = imageResponse.data.imageUrl // API returns data.imageUrl field
-      console.log('Question image uploaded successfully:', questionImageUrl)
+    // Upload all images and build questions array
+    uploadProgress.value = 'Đang tải ảnh...'
+    const processedQuestions = []
+    for (let i = 0; i < questions.value.length; i++) {
+      const q = questions.value[i]
+      let imageUrl = null
+      if (q.image) imageUrl = await uploadImageIfNeeded(q.image)
+      const processedAnswers = []
+      for (let j = 0; j < q.answers.length; j++) {
+        const a = q.answers[j]
+        let answerImageUrl = null
+        if (a.image) answerImageUrl = await uploadImageIfNeeded(a.image)
+        processedAnswers.push({
+          content: a.content.trim(),
+          imageUrl: answerImageUrl,
+          isCorrect: q.correctIndex === j,
+          order: j,
+        })
+      }
+      processedQuestions.push({
+        content: q.content.trim(),
+        imageUrl,
+        answers: processedAnswers,
+      })
     }
-
-    // 2. Upload answer images if exist and prepare answers
-    uploadProgress.value = 'Đang tải ảnh đáp án...'
-    const processedAnswers = await Promise.all(
-      question.value.answers
-        .filter((answer) => answer.content.trim()) // Only process answers with content
-        .map(async (answer, index) => {
-          let answerImageUrl = null
-          if (answer.image) {
-            console.log('Uploading answer image:', answer.image.name)
-            const answerImageResponse = await questionApi.uploadQuestionImage(answer.image)
-            answerImageUrl = answerImageResponse.data.imageUrl // API returns data.imageUrl field
-            console.log('Answer image uploaded successfully:', answerImageUrl)
-          }
-
-          return {
-            content: answer.content.trim(),
-            isCorrect: answer.isCorrect,
-            order: index + 1, // Use filtered index for correct order
-            imageUrl: answerImageUrl,
-          }
-        }),
-    )
-
-    // 3. Prepare question data
-    const questionData = {
-      content: question.value.content.trim(),
-      imageUrl: questionImageUrl,
-      isActive: true,
-      answers: processedAnswers,
+    const data = {
+      name: setName.value.trim(),
+      questions: processedQuestions,
     }
-
-    console.log('Creating question with data:', questionData)
-
-    // 4. Create question
-    uploadProgress.value = 'Đang tạo câu hỏi...'
-    const response = await questionApi.createQuestion(questionData)
-
+    uploadProgress.value = 'Đang tạo bộ đề...'
+    const response = await questionApi.createQuestionSet(data)
     if (response.success) {
-      console.log('Question created successfully:', response.data)
-
-      // Show success message
       showSuccess.value = true
       setTimeout(() => {
         showSuccess.value = false
       }, 3000)
+      resetForm()
     } else {
-      throw new Error(response.message || 'Failed to create question')
+      throw new Error(response.message || 'Tạo bộ đề thất bại')
     }
   } catch (error) {
-    console.error('Save question failed:', error)
-
-    // Show error message to user
-    errorMessage.value =
-      error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu câu hỏi'
+    errorMessage.value = error.response?.data?.message || error.message || 'Có lỗi khi tạo bộ đề'
     showError.value = true
     setTimeout(() => {
       showError.value = false
@@ -362,44 +282,13 @@ const saveQuestion = async () => {
   }
 }
 
-const saveAndCreateNew = async () => {
-  const originalShowSuccess = showSuccess.value
-  await saveQuestion()
-
-  // Only reset form if save was successful (no error shown)
-  if (!isSaving.value && !showError.value) {
-    resetForm()
-  }
-}
-
-const resetForm = () => {
-  question.value = {
-    content: '',
-    image: null,
-    imagePreview: null,
-    answers: [
-      { content: '', isCorrect: false, image: null, imagePreview: null },
-      { content: '', isCorrect: false, image: null, imagePreview: null },
-    ],
-    category: 'Toán',
-    difficulty: 'Trung bình',
-    grade: 10,
-    points: 10,
-    explanation: '',
-  }
-}
-
-// Lifecycle
 onMounted(() => {
-  // Check admin session
   const isLoggedIn = localStorage.getItem('adminLoggedIn')
   const email = localStorage.getItem('adminEmail')
-
   if (!isLoggedIn || isLoggedIn !== 'true' || !email) {
     router.push('/admin')
     return
   }
-
   adminEmail.value = email
 })
 </script>
@@ -509,22 +398,14 @@ onMounted(() => {
   padding: 2rem;
 }
 
-.question-form-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  align-items: start;
-}
-
-.form-section,
-.preview-section {
+.question-set-form-container {
   background: white;
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.question-form {
+.question-set-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -559,13 +440,30 @@ onMounted(() => {
   border-color: #4f46e5;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-.answers-container {
+.question-block {
+  padding: 1.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.question-header {
+  margin-bottom: 1rem;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 1rem;
+}
+
+.answers-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -591,17 +489,24 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-.remove-answer-btn {
-  background: none;
-  border: none;
+.correct-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   cursor: pointer;
-  font-size: 1rem;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #059669;
+  white-space: nowrap;
 }
 
-.remove-answer-btn:hover {
-  opacity: 1;
+.correct-checkbox input[type='radio'] {
+  width: auto;
+  margin: 0;
+}
+
+.checkmark {
+  font-weight: bold;
 }
 
 .answer-input-group {
@@ -614,8 +519,31 @@ onMounted(() => {
   flex: 1;
 }
 
-.answer-image-upload {
+.answer-image-toggle {
   margin-top: 0.75rem;
+}
+
+.toggle-image-btn {
+  background: #edf2f7;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.toggle-image-btn:hover {
+  background: #e2e8f0;
+  border-color: #4f46e5;
+}
+
+.question-image-upload,
+.answer-image-upload {
+  margin-top: 0.5rem;
 }
 
 .answer-image-label {
@@ -654,94 +582,62 @@ onMounted(() => {
   max-height: 80px;
 }
 
-.correct-checkbox {
+.save-btn {
+  background: linear-gradient(90deg, #6366f1 0%, #3b82f6 100%);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 2.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px 0 rgba(59, 130, 246, 0.1);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #059669;
-  white-space: nowrap;
 }
 
-.correct-checkbox input[type='checkbox'] {
-  width: auto;
-  margin: 0;
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #a5b4fc;
 }
 
-.checkmark {
-  font-weight: bold;
+.save-btn:hover:not(:disabled) {
+  background: linear-gradient(90deg, #4f46e5 0%, #2563eb 100%);
+  box-shadow: 0 6px 24px 0 rgba(59, 130, 246, 0.15);
 }
 
-.add-answer-btn {
-  padding: 0.75rem 1rem;
-  background: #f0f9ff;
-  color: #0369a1;
-  border: 2px dashed #0369a1;
+.reset-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 2px solid #d1d5db;
+  padding: 0.75rem 2rem;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border 0.2s;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.03);
 }
 
-.add-answer-btn:hover {
-  background: #e0f2fe;
+.reset-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+  border-color: #a1a1aa;
 }
 
 .form-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.reset-btn,
-.save-btn,
-.save-new-btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.reset-btn {
-  background: #f7fafc;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-}
-
-.reset-btn:hover {
-  background: #edf2f7;
-}
-
-.save-btn {
-  background: #059669;
-  color: white;
-  flex: 1;
-}
-
-.save-btn:hover:not(:disabled) {
-  background: #047857;
-}
-
-.save-new-btn {
-  background: #3b82f6;
-  color: white;
-}
-
-.save-new-btn:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-.save-btn:disabled,
-.save-new-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  justify-content: flex-end;
 }
 
 .loading-content {
@@ -763,128 +659,6 @@ onMounted(() => {
   to {
     transform: rotate(360deg);
   }
-}
-
-.preview-section h3 {
-  margin: 0 0 1.5rem 0;
-  color: #2d3748;
-  font-size: 1.125rem;
-}
-
-.question-preview {
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  background: #fafafa;
-}
-
-.preview-question h4 {
-  margin: 0 0 1rem 0;
-  color: #1a202c;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.preview-image {
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-  margin: 1rem 0;
-}
-
-.preview-answers {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin: 1rem 0;
-}
-
-.preview-answer {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: white;
-  border-radius: 6px;
-  border: 2px solid #e2e8f0;
-}
-
-.preview-answer.correct {
-  background: #f0fdf4;
-  border-color: #22c55e;
-  color: #166534;
-}
-
-.answer-content {
-  display: flex;
-  gap: 0.5rem;
-  flex: 1;
-  align-items: flex-start;
-}
-
-.answer-letter {
-  font-weight: bold;
-  min-width: 20px;
-  margin-top: 0.125rem;
-}
-
-.answer-text-and-image {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.answer-text {
-  line-height: 1.4;
-}
-
-.answer-preview-image {
-  max-width: 120px;
-  max-height: 80px;
-  border-radius: 4px;
-  object-fit: cover;
-  border: 1px solid #e2e8f0;
-}
-
-.correct-indicator {
-  margin-left: auto;
-  color: #22c55e;
-  font-weight: bold;
-  margin-top: 0.125rem;
-}
-
-.preview-explanation {
-  margin: 1rem 0;
-  padding: 1rem;
-  background: #fffbeb;
-  border-radius: 6px;
-  border-left: 4px solid #f59e0b;
-}
-
-.preview-explanation strong {
-  color: #92400e;
-}
-
-.preview-explanation p {
-  margin: 0.5rem 0 0 0;
-  color: #78350f;
-}
-
-.preview-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.meta-item {
-  padding: 0.25rem 0.75rem;
-  background: #e5e7eb;
-  color: #374151;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
 }
 
 .success-message,
@@ -964,22 +738,61 @@ onMounted(() => {
     padding: 1rem;
   }
 
-  .question-form-container {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .form-section,
-  .preview-section {
+  .question-set-form-container {
     padding: 1rem;
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
-  .form-actions {
-    flex-direction: column;
+  .form-group label {
+    font-size: 0.75rem;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .questions-list {
+    gap: 1.5rem;
+  }
+
+  .question-block {
+    padding: 1rem;
+  }
+
+  .question-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .question-number {
+    font-size: 0.875rem;
+  }
+
+  .answers-list {
+    gap: 0.75rem;
+  }
+
+  .answer-item {
+    padding: 0.75rem;
+  }
+
+  .answer-header {
+    margin-bottom: 0.25rem;
+  }
+
+  .answer-label {
+    font-size: 0.75rem;
+  }
+
+  .correct-checkbox {
+    font-size: 0.75rem;
   }
 
   .answer-input-group {
@@ -988,18 +801,8 @@ onMounted(() => {
     gap: 0.5rem;
   }
 
-  .correct-checkbox {
-    justify-content: center;
-  }
-
-  .answer-content {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .answer-preview-image {
-    max-width: 100px;
-    max-height: 60px;
+  .answer-image-toggle {
+    margin-top: 0.5rem;
   }
 
   .compact-upload .upload-area {
@@ -1009,6 +812,14 @@ onMounted(() => {
 
   .compact-upload .image-preview img {
     max-height: 60px;
+  }
+
+  .save-btn {
+    padding: 0.75rem;
+  }
+
+  .save-new-btn {
+    padding: 0.75rem;
   }
 }
 </style>

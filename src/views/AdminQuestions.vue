@@ -66,10 +66,6 @@
         <div class="questions-list">
           <div class="list-header">
             <h3>Danh sách câu hỏi ({{ filteredQuestions.length }}/{{ questions.length }})</h3>
-            <div class="list-stats">
-              <span class="stat-item">Hoạt động: {{ activeQuestionsCount }}</span>
-              <span class="stat-item">Tổng: {{ questions.length }}</span>
-            </div>
           </div>
 
           <!-- Loading State -->
@@ -108,6 +104,9 @@
               <div class="col-content">
                 <div class="question-preview">
                   <p class="question-text">{{ question.content }}</p>
+                  <div v-if="question.questionSetId" class="question-set-id">
+                    <small style="color: #888">Set: {{ question.questionSetId }}</small>
+                  </div>
                   <img
                     v-if="question.imageUrl"
                     :src="question.imageUrl"
@@ -155,11 +154,32 @@
 
           <!-- Pagination -->
           <div class="pagination">
-            <button @click="currentPage--" :disabled="currentPage <= 1" class="page-btn">
+            <button
+              @click="goToPage(currentPage - 1)"
+              :disabled="currentPage <= 1"
+              class="page-btn"
+            >
               ◀ Trước
             </button>
-            <span class="page-info"> Trang {{ currentPage }} / {{ totalPages }} </span>
-            <button @click="currentPage++" :disabled="currentPage >= totalPages" class="page-btn">
+            <span class="page-info">
+              Trang {{ currentPage }} / {{ totalPages }} (Tổng: {{ totalQuestions }})
+            </span>
+            <input
+              v-model.number="pageInput"
+              @keyup.enter="goToPage(pageInput)"
+              type="number"
+              min="1"
+              :max="totalPages"
+              class="page-input"
+              style="width: 60px; margin: 0 8px; text-align: center"
+              :placeholder="currentPage"
+            />
+            <button @click="goToPage(pageInput)" class="page-btn">Đi</button>
+            <button
+              @click="goToPage(currentPage + 1)"
+              :disabled="currentPage >= totalPages"
+              class="page-btn"
+            >
               Sau ▶
             </button>
           </div>
@@ -344,7 +364,10 @@ const includeInactive = ref(true)
 
 // Pagination
 const currentPage = ref(1)
-const itemsPerPage = 10
+const itemsPerPage = ref(10)
+const totalQuestions = ref(0)
+const totalPages = ref(1)
+const pageInput = ref(1)
 
 // Edit modal
 const showEditModal = ref(false)
@@ -368,14 +391,21 @@ const showSuccess = ref(false)
 // Questions data from API
 const questions = ref([])
 
-// Load questions from API
-const loadQuestions = async () => {
+// Load questions from API (with pagination)
+const loadQuestions = async (page = currentPage.value) => {
   isLoading.value = true
   try {
-    const response = await questionApi.getAllQuestions(includeInactive.value)
+    const response = await questionApi.getAllQuestions({
+      includeInactive: includeInactive.value,
+      page,
+      limit: itemsPerPage.value,
+    })
     if (response.success) {
-      questions.value = response.data
-      console.log('Questions loaded:', response.data.length)
+      questions.value = response.data.map((q) => ({ ...q }))
+      totalQuestions.value = response.meta?.total || response.data.length
+      totalPages.value = response.meta?.totalPages || 1
+      currentPage.value = response.meta?.page || page
+      pageInput.value = currentPage.value
     } else {
       throw new Error(response.message || 'Failed to load questions')
     }
@@ -392,8 +422,18 @@ const loadQuestions = async () => {
   }
 }
 
+// Go to a specific page and load questions for that page
+const goToPage = (page) => {
+  if (!page || page < 1 || page > totalPages.value || page === currentPage.value) {
+    pageInput.value = currentPage.value
+    return
+  }
+  loadQuestions(page)
+}
+
 // Computed
 const filteredQuestions = computed(() => {
+  // Search is now client-side, but pagination is server-side
   return questions.value.filter((q) => {
     const matchesSearch = q.content.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesStatus = includeInactive.value || q.isActive
@@ -405,14 +445,9 @@ const activeQuestionsCount = computed(() => {
   return questions.value.filter((q) => q.isActive).length
 })
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredQuestions.value.length / itemsPerPage)
-})
-
+// Pagination is now server-side, so just use questions.value
 const paginatedQuestions = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filteredQuestions.value.slice(start, end)
+  return filteredQuestions.value
 })
 
 // Edit modal computed properties
@@ -1933,5 +1968,15 @@ onMounted(() => {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.page-input {
+  padding: 0.5rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 60px;
+  margin: 0 8px;
+  text-align: center;
 }
 </style>

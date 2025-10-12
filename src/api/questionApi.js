@@ -6,10 +6,11 @@ const questionApi = {
     return axiosClient.get('/questions', { params })
   },
 
-  // Get all questions including inactive ones
-  getAllQuestions: (includeInactive = true) => {
+  // Get all questions including inactive ones, with pagination and filters
+  getAllQuestions: (params = {}) => {
+    // params: { includeInactive, page, limit, ... }
     return axiosClient.get('/questions', {
-      params: { includeInactive },
+      params,
     })
   },
 
@@ -103,6 +104,15 @@ const questionApi = {
   // Duplicate question
   duplicateQuestion: (id) => {
     return axiosClient.post(`/questions/${id}/duplicate`)
+  },
+
+  // Create question set
+  createQuestionSet: (data) => {
+    return axiosClient.post('/question-sets', data, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
   },
 }
 
