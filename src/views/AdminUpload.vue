@@ -117,6 +117,9 @@
                       </div>
                     </div>
                   </div>
+                  <button type="button" class="add-answer-btn" @click="addAnswer(q)">
+                    + Thêm đáp án
+                  </button>
                 </div>
               </div>
             </div>
@@ -280,6 +283,16 @@ const submitQuestionSet = async () => {
     isSaving.value = false
     uploadProgress.value = ''
   }
+}
+
+function addAnswer(q) {
+  q.answers.push({
+    content: '',
+    image: null,
+    imagePreview: null,
+    showImage: false,
+    order: q.answers.length,
+  })
 }
 
 onMounted(() => {
@@ -821,5 +834,20 @@ onMounted(() => {
   .save-new-btn {
     padding: 0.75rem;
   }
+}
+
+.add-answer-btn {
+  margin-top: 0.5rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.add-answer-btn:hover {
+  background: #c7d2fe;
 }
 </style>
