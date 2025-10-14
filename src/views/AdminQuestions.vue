@@ -1179,14 +1179,6 @@ onMounted(() => {
   /* Hiển thị đầy đủ nội dung, không cắt */
 }
 
-.answer-thumbnail {
-  /* Đã thiết lập width/height ở selector gộp phía trên */
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  flex-shrink: 0;
-}
-
 .col-actions {
   display: flex;
   gap: 0.5rem;
