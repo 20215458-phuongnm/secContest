@@ -1102,11 +1102,13 @@ onMounted(() => {
 .answer-thumbnail,
 .preview-image,
 .preview-image-small {
-  width: 800px; /* Explicitly set width */
-  height: 600px; /* Explicitly set height */
-  border-radius: 6px;
+  width: 180px;
+  height: 120px;
+  border-radius: 8px;
   margin: 1rem 0;
-  object-fit: cover; /* Ensure images fit within the specified dimensions */
+  object-fit: contain;
+  background: #f3f4f6;
+  border: 1.5px solid #e2e8f0;
 }
 
 .answers-preview {
