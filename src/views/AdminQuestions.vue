@@ -1092,13 +1092,10 @@ onMounted(() => {
 
 .question-text {
   margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.5;
+  display: block;
+  /* Hiển thị đầy đủ nội dung, không cắt */
 }
 
 .question-thumbnail,
@@ -1173,17 +1170,15 @@ onMounted(() => {
 
 .answer-text {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 150px;
-  font-size: 0.8rem;
-  line-height: 1.3;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  white-space: pre-line;
+  word-break: break-word;
+  /* Hiển thị đầy đủ nội dung, không cắt */
 }
 
 .answer-thumbnail {
-  width: 35px;
-  height: 22px;
+  /* Đã thiết lập width/height ở selector gộp phía trên */
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid #e2e8f0;
@@ -1931,10 +1926,11 @@ onMounted(() => {
 
 .answer-text {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 150px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  white-space: pre-line;
+  word-break: break-word;
+  /* Hiển thị đầy đủ nội dung, không cắt */
 }
 
 .more-answers {
