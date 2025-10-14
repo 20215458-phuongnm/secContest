@@ -26,7 +26,7 @@
         </RouterLink>
         <RouterLink to="/admin/upload" class="nav-item active">
           <span class="nav-icon"></span>
-          Tạo bộ đề
+          Tạo câu hỏi
         </RouterLink>
       </div>
     </nav>
@@ -87,13 +87,15 @@
                         <span class="checkmark">✓</span> Đúng
                       </label>
                     </div>
-                    <div class="answer-input-group">
-                      <input
+                    <div class="form-group">
+                      <label style="display: none"></label>
+                      <textarea
                         v-model="a.content"
-                        type="text"
                         required
                         :placeholder="`Nhập đáp án ${String.fromCharCode(65 + aIdx)}...`"
-                      />
+                        rows="2"
+                        style="resize: vertical"
+                      ></textarea>
                     </div>
                     <div class="answer-image-toggle">
                       <button

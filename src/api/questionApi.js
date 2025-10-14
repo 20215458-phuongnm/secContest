@@ -114,6 +114,12 @@ const questionApi = {
       },
     })
   },
+
+  // Get all question sets
+  getAllSetQuestion: (params = {}) => {
+    // params: { page, limit, ... } nếu cần phân trang
+    return axiosClient.get('/question-sets', { params })
+  },
 }
 
 export default questionApi

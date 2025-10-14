@@ -62,126 +62,175 @@
           </div>
         </div>
 
-        <!-- Questions List -->
+        <!-- Question Sets List -->
         <div class="questions-list">
           <div class="list-header">
-            <h3>Danh sách câu hỏi ({{ filteredQuestions.length }}/{{ questions.length }})</h3>
+            <h3>Danh sách bộ đề ({{ questionSets.length }})</h3>
           </div>
 
           <!-- Loading State -->
           <div v-if="isLoading" class="loading-state">
             <div class="spinner-large"></div>
-            <p>Đang tải câu hỏi...</p>
+            <p>Đang tải bộ đề...</p>
           </div>
 
           <!-- Empty State -->
-          <div v-else-if="questions.length === 0" class="empty-state">
-            <h4>Chưa có câu hỏi nào</h4>
-            <p>Hãy tạo câu hỏi đầu tiên của bạn</p>
+          <div v-else-if="questionSets.length === 0" class="empty-state">
+            <h4>Chưa có bộ đề nào</h4>
+            <p>Hãy tạo bộ đề đầu tiên của bạn</p>
           </div>
 
-          <!-- Questions Table -->
-          <div v-else class="questions-table">
-            <div class="table-header">
-              <div class="col-status">Trạng thái</div>
-              <div class="col-content">Nội dung câu hỏi</div>
-              <div class="col-answers">Đáp án</div>
-              <div class="col-date">Ngày tạo</div>
-              <div class="col-actions">Thao tác</div>
+          <!-- Question Sets Table -->
+          <div v-else>
+            <div class="table-header" style="background: #f1f5f9">
+              <div style="flex: 1; font-weight: 600">Tên bộ đề</div>
+              <div style="width: 120px; font-weight: 600">Trạng thái</div>
+              <div style="width: 120px; font-weight: 600">Số câu hỏi</div>
+              <div style="width: 120px; font-weight: 600">Thao tác</div>
             </div>
-
-            <div v-for="question in paginatedQuestions" :key="question.id" class="table-row">
-              <div class="col-status">
-                <button
-                  @click="toggleQuestionStatus(question)"
-                  class="status-btn"
-                  :class="{ active: question.isActive }"
-                >
-                  {{ question.isActive ? 'Hoạt động' : 'Đã ẩn' }}
-                </button>
-              </div>
-
-              <div class="col-content">
-                <div class="question-preview">
-                  <p class="question-text">{{ question.content }}</p>
-                  <div v-if="question.questionSetId" class="question-set-id">
-                    <small style="color: #888">Set: {{ question.questionSetId }}</small>
-                  </div>
-                  <img
-                    v-if="question.imageUrl"
-                    :src="question.imageUrl"
-                    alt="Question image"
-                    class="question-thumbnail"
-                  />
+            <div
+              v-for="set in questionSets"
+              :key="set.id"
+              class="table-row"
+              :style="{ background: selectedSet && selectedSet.id === set.id ? '#e0f2fe' : '' }"
+            >
+              <div style="flex: 1; cursor: pointer" @click="selectSet(set)">
+                <span style="font-weight: 500">{{ set.name }}</span>
+                <div v-if="set.description" style="font-size: 0.85em; color: #888">
+                  {{ set.description }}
                 </div>
               </div>
+              <div style="width: 120px">
+                <span
+                  :style="{ color: set.isActive ? '#059669' : '#991b1b', fontWeight: 'bold' }"
+                  >{{ set.isActive ? 'Hoạt động' : 'Đã ẩn' }}</span
+                >
+              </div>
+              <div style="width: 120px">{{ set.questions?.length || 0 }}</div>
+              <div style="width: 120px">
+                <button class="action-btn edit-btn" @click.stop="selectSet(set)">
+                  Xem câu hỏi
+                </button>
+              </div>
+            </div>
+          </div>
 
-              <div class="col-answers">
-                <div class="answers-preview">
-                  <div
-                    v-for="(answer, index) in question.answers"
-                    :key="answer.id"
-                    class="answer-preview"
-                    :class="`answer-${index + 1}`"
+          <!-- Questions in selected set -->
+          <div v-if="selectedSet" style="margin-top: 2rem">
+            <div class="list-header">
+              <h3>
+                Câu hỏi trong bộ đề: {{ selectedSet.name }} ({{ filteredQuestions.length }}/{{
+                  questions.length
+                }})
+              </h3>
+            </div>
+
+            <div v-if="questions.length === 0" class="empty-state">
+              <h4>Bộ đề này chưa có câu hỏi nào</h4>
+            </div>
+
+            <div v-else class="questions-table">
+              <div class="table-header">
+                <div class="col-status">Trạng thái</div>
+                <div class="col-content">Nội dung câu hỏi</div>
+                <div class="col-answers">Đáp án</div>
+                <div class="col-date">Ngày tạo</div>
+                <div class="col-actions">Thao tác</div>
+              </div>
+
+              <div v-for="question in paginatedQuestions" :key="question.id" class="table-row">
+                <div class="col-status">
+                  <button
+                    @click="toggleQuestionStatus(question)"
+                    class="status-btn"
+                    :class="{ active: question.isActive }"
                   >
-                    <span class="answer-label">{{ String.fromCharCode(65 + index) }}.</span>
-                    <span class="answer-indicator" :class="{ correct: answer.isCorrect }">
-                      {{ answer.isCorrect ? '✓' : '○' }}
-                    </span>
-                    <span class="answer-text">{{ answer.content }}</span>
+                    {{ question.isActive ? 'Hoạt động' : 'Đã ẩn' }}
+                  </button>
+                </div>
+
+                <div class="col-content">
+                  <div class="question-preview">
+                    <p class="question-text">{{ question.content }}</p>
+                    <div v-if="question.questionSetId" class="question-set-id">
+                      <small style="color: #888">Set: {{ question.questionSetId }}</small>
+                    </div>
                     <img
-                      v-if="answer.imageUrl"
-                      :src="answer.imageUrl"
-                      alt="Answer image"
-                      class="answer-thumbnail"
+                      v-if="question.imageUrl"
+                      :src="question.imageUrl"
+                      alt="Question image"
+                      class="question-thumbnail"
                     />
                   </div>
                 </div>
-              </div>
 
-              <div class="col-date">
-                {{ formatDate(question.createdAt) }}
-              </div>
+                <div class="col-answers">
+                  <div class="answers-preview">
+                    <div
+                      v-for="(answer, index) in question.answers"
+                      :key="answer.id"
+                      class="answer-preview"
+                      :class="`answer-${index + 1}`"
+                    >
+                      <span class="answer-label">{{ String.fromCharCode(65 + index) }}.</span>
+                      <span class="answer-indicator" :class="{ correct: answer.isCorrect }">
+                        {{ answer.isCorrect ? '✓' : '○' }}
+                      </span>
+                      <span class="answer-text">{{ answer.content }}</span>
+                      <img
+                        v-if="answer.imageUrl"
+                        :src="answer.imageUrl"
+                        alt="Answer image"
+                        class="answer-thumbnail"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              <div class="col-actions">
-                <button @click="editQuestion(question)" class="action-btn edit-btn">Sửa</button>
-                <button @click="deleteQuestion(question.id)" class="action-btn delete-btn">
-                  Xóa
-                </button>
+                <div class="col-date">
+                  {{ formatDate(question.createdAt) }}
+                </div>
+
+                <div class="col-actions">
+                  <button @click="editQuestion(question)" class="action-btn edit-btn">Sửa</button>
+                  <button @click="deleteQuestion(question.id)" class="action-btn delete-btn">
+                    Xóa
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Pagination -->
-          <div class="pagination">
-            <button
-              @click="goToPage(currentPage - 1)"
-              :disabled="currentPage <= 1"
-              class="page-btn"
-            >
-              ◀ Trước
-            </button>
-            <span class="page-info">
-              Trang {{ currentPage }} / {{ totalPages }} (Tổng: {{ totalQuestions }})
-            </span>
-            <input
-              v-model.number="pageInput"
-              @keyup.enter="goToPage(pageInput)"
-              type="number"
-              min="1"
-              :max="totalPages"
-              class="page-input"
-              style="width: 60px; margin: 0 8px; text-align: center"
-              :placeholder="currentPage"
-            />
-            <button @click="goToPage(pageInput)" class="page-btn">Đi</button>
-            <button
-              @click="goToPage(currentPage + 1)"
-              :disabled="currentPage >= totalPages"
-              class="page-btn"
-            >
-              Sau ▶
-            </button>
+            <!-- Pagination for questions in set -->
+            <div class="pagination">
+              <button
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage <= 1"
+                class="page-btn"
+              >
+                ◀ Trước
+              </button>
+              <span class="page-info">
+                Trang {{ currentPage }} / {{ totalPages }} (Tổng: {{ totalQuestions }})
+              </span>
+              <input
+                v-model.number="pageInput"
+                @keyup.enter="goToPage(pageInput)"
+                type="number"
+                min="1"
+                :max="totalPages"
+                class="page-input"
+                style="width: 60px; margin: 0 8px; text-align: center"
+                :placeholder="currentPage"
+              />
+              <button @click="goToPage(pageInput)" class="page-btn">Đi</button>
+              <button
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage >= totalPages"
+                class="page-btn"
+              >
+                Sau ▶
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -388,31 +437,32 @@ const showError = ref(false)
 const successMessage = ref('')
 const showSuccess = ref(false)
 
-// Questions data from API
-const questions = ref([])
+// Question sets and questions
+const questionSets = ref([])
+const selectedSet = ref(null)
+const questions = ref([]) // questions of selected set
 
-// Load questions from API (with pagination)
-const loadQuestions = async (page = currentPage.value) => {
+// Load all question sets
+const loadQuestionSets = async () => {
   isLoading.value = true
   try {
-    const response = await questionApi.getAllQuestions({
-      includeInactive: includeInactive.value,
-      page,
-      limit: itemsPerPage.value,
-    })
+    const response = await questionApi.getAllSetQuestion()
     if (response.success) {
-      questions.value = response.data.map((q) => ({ ...q }))
-      totalQuestions.value = response.meta?.total || response.data.length
-      totalPages.value = response.meta?.totalPages || 1
-      currentPage.value = response.meta?.page || page
-      pageInput.value = currentPage.value
+      questionSets.value = response.data
+      // Auto-select first set if available
+      if (questionSets.value.length > 0) {
+        selectSet(questionSets.value[0])
+      } else {
+        selectedSet.value = null
+        questions.value = []
+      }
     } else {
-      throw new Error(response.message || 'Failed to load questions')
+      throw new Error(response.message || 'Failed to load question sets')
     }
   } catch (error) {
-    console.error('Load questions failed:', error)
+    console.error('Load question sets failed:', error)
     errorMessage.value =
-      error.response?.data?.message || error.message || 'Có lỗi xảy ra khi tải câu hỏi'
+      error.response?.data?.message || error.message || 'Có lỗi xảy ra khi tải bộ đề'
     showError.value = true
     setTimeout(() => {
       showError.value = false
@@ -422,18 +472,30 @@ const loadQuestions = async (page = currentPage.value) => {
   }
 }
 
-// Go to a specific page and load questions for that page
+// Select a set and show its questions
+const selectSet = (set) => {
+  selectedSet.value = set
+  questions.value = set.questions || []
+  // Reset pagination for questions in set
+  totalQuestions.value = questions.value.length
+  totalPages.value = Math.max(1, Math.ceil(totalQuestions.value / itemsPerPage.value))
+  currentPage.value = 1
+  pageInput.value = 1
+}
+
+// Go to a specific page for questions in selected set
 const goToPage = (page) => {
   if (!page || page < 1 || page > totalPages.value || page === currentPage.value) {
     pageInput.value = currentPage.value
     return
   }
-  loadQuestions(page)
+  currentPage.value = page
+  pageInput.value = page
 }
 
 // Computed
 const filteredQuestions = computed(() => {
-  // Search is now client-side, but pagination is server-side
+  // Search and filter on client for questions in selected set
   return questions.value.filter((q) => {
     const matchesSearch = q.content.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesStatus = includeInactive.value || q.isActive
@@ -445,9 +507,11 @@ const activeQuestionsCount = computed(() => {
   return questions.value.filter((q) => q.isActive).length
 })
 
-// Pagination is now server-side, so just use questions.value
+// Pagination is now client-side for questions in set
 const paginatedQuestions = computed(() => {
-  return filteredQuestions.value
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredQuestions.value.slice(start, end)
 })
 
 // Edit modal computed properties
@@ -695,7 +759,7 @@ onMounted(() => {
   }
 
   adminEmail.value = localStorage.getItem('adminEmail') || 'admin@sectest.com'
-  loadQuestions()
+  loadQuestionSets()
 })
 </script>
 
