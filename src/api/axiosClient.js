@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Base URL configuration from environment variables
-const BASE_URL = 'http://localhost:3000' 
+const BASE_URL = 'http://seccom-be-production.up.railway.app' 
 
 // Create axios instance
 const axiosClient = axios.create({
