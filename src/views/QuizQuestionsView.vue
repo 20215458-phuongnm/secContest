@@ -169,6 +169,8 @@ const currentQuestion = ref(0)
 const userAnswers = ref([])
 const timeRemaining = ref(20 * 60) // 20 minutes in seconds
 const quizTimer = ref(null)
+const isAutoSubmitting = ref(false)
+const autoSubmitBufferSeconds = 8 // number of seconds before time up to trigger auto-submit
 const examData = ref(null)
 const sessionId = ref(null)
 const isSubmitting = ref(false)
@@ -323,6 +325,9 @@ const confirmSubmit = async () => {
 }
 
 const confirmTimeUpSubmit = async () => {
+  // Prevent duplicate auto-submits
+  if (isSubmitting.value || isAutoSubmitting.value) return
+  isAutoSubmitting.value = true
   showTimeUpModal.value = false
 
   try {
@@ -378,7 +383,9 @@ const confirmTimeUpSubmit = async () => {
 }
 
 const performSubmit = async () => {
+  if (isSubmitting.value) return
   isSubmitting.value = true
+  isAutoSubmitting.value = true
 
   try {
     // Prepare answers for API submission
@@ -456,8 +463,29 @@ const startTimer = () => {
         clearInterval(quizTimer.value)
       }
 
-      // Show time up modal
+      // Ensure we only submit once on exact timeout
+      if (!isAutoSubmitting.value) {
+        isAutoSubmitting.value = true
+        // Show time up modal briefly then auto-submit
+        showTimeUpModal.value = true
+
+        // Automatically call confirmTimeUpSubmit after a short delay to allow user to see modal
+        setTimeout(() => {
+          // Hide modal and perform submission
+          showTimeUpModal.value = false
+          confirmTimeUpSubmit()
+        }, 1200)
+      }
+    }
+    // Trigger auto-submit a few seconds before time runs out to avoid server-side race
+    else if (timeRemaining.value <= autoSubmitBufferSeconds && !isAutoSubmitting.value) {
+      isAutoSubmitting.value = true
+      // show a warning modal briefly and then auto-submit
       showTimeUpModal.value = true
+      setTimeout(() => {
+        showTimeUpModal.value = false
+        confirmTimeUpSubmit()
+      }, 1200)
     }
   }, 1000)
 }
