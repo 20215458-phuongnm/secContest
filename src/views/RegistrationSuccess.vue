@@ -18,7 +18,7 @@
           <p class="info-note">(Vui lòng kiểm tra hộp thư đến và thư mục Spam/Quảng cáo)</p>
 
           <p class="info-title">Thời gian mở đơn Vòng 1</p>
-          <p class="info-item">• Từ <strong>10/10/2025 đến 23/10/2025</strong>.</p>
+          <p class="info-item">• Từ <strong>17/10/2025 đến 30/10/2025</strong>.</p>
 
           <p class="info-title">Lưu ý</p>
           <p class="info-item">• Hãy đăng nhập và tham gia thi trong thời gian quy định.</p>
