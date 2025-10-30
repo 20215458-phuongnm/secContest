@@ -479,13 +479,13 @@ const startTimer = () => {
     }
     // Trigger auto-submit a few seconds before time runs out to avoid server-side race
     else if (timeRemaining.value <= autoSubmitBufferSeconds && !isAutoSubmitting.value) {
-      isAutoSubmitting.value = true
       // Clear timer to avoid duplicate triggers
       if (quizTimer.value) {
         clearInterval(quizTimer.value)
       }
-      // Directly perform auto-submit and then redirect to results
-      confirmTimeUpSubmit()
+      // Directly perform the standard submit flow (same as manual submit)
+      // performSubmit will set submission flags and redirect on success/failure.
+      performSubmit()
       return
     }
   }, 1000)
