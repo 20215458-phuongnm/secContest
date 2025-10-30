@@ -629,6 +629,9 @@ onUnmounted(() => {
   margin-bottom: 2rem;
   font-weight: 500;
   cursor: default;
+  /* Preserve newlines from data (\n) and wrap long words */
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 .answers-section {
@@ -672,6 +675,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  /* Allow answers to show line breaks if present */
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 /* Loading state */
