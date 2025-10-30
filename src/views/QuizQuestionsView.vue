@@ -170,7 +170,7 @@ const userAnswers = ref([])
 const timeRemaining = ref(30 * 60) // 30 minutes in seconds
 const quizTimer = ref(null)
 const isAutoSubmitting = ref(false)
-const autoSubmitBufferSeconds = 8 // number of seconds before time up to trigger auto-submit
+const autoSubmitBufferSeconds = 2 // number of seconds before time up to trigger auto-submit
 const examData = ref(null)
 const sessionId = ref(null)
 const isSubmitting = ref(false)
@@ -480,12 +480,13 @@ const startTimer = () => {
     // Trigger auto-submit a few seconds before time runs out to avoid server-side race
     else if (timeRemaining.value <= autoSubmitBufferSeconds && !isAutoSubmitting.value) {
       isAutoSubmitting.value = true
-      // show a warning modal briefly and then auto-submit
-      showTimeUpModal.value = true
-      setTimeout(() => {
-        showTimeUpModal.value = false
-        confirmTimeUpSubmit()
-      }, 1200)
+      // Clear timer to avoid duplicate triggers
+      if (quizTimer.value) {
+        clearInterval(quizTimer.value)
+      }
+      // Directly perform auto-submit and then redirect to results
+      confirmTimeUpSubmit()
+      return
     }
   }, 1000)
 }
