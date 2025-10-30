@@ -17,7 +17,7 @@
           </p>
 
           <p class="time-limit">
-            <em>Thời gian làm bài: 20 phút</em>
+            <em>Thời gian làm bài: 30 phút</em>
           </p>
 
           <p class="encouragement">Chúc bạn hoàn thành tốt bài thi của mình!</p>

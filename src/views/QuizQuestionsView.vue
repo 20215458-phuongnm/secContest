@@ -167,7 +167,7 @@ const router = useRouter()
 // Quiz state
 const currentQuestion = ref(0)
 const userAnswers = ref([])
-const timeRemaining = ref(20 * 60) // 20 minutes in seconds
+const timeRemaining = ref(30 * 60) // 30 minutes in seconds
 const quizTimer = ref(null)
 const isAutoSubmitting = ref(false)
 const autoSubmitBufferSeconds = 8 // number of seconds before time up to trigger auto-submit
@@ -175,7 +175,7 @@ const examData = ref(null)
 const sessionId = ref(null)
 const isSubmitting = ref(false)
 const startTime = ref(null) // Thời gian bắt đầu bài thi
-const totalTime = ref(20 * 60) // Tổng thời gian làm bài (20 phút)
+const totalTime = ref(30 * 60) // Tổng thời gian làm bài (30 phút)
 
 // Modal states
 const showConfirmModal = ref(false)
@@ -242,8 +242,8 @@ const loadExamData = () => {
     // Initialize user answers array
     userAnswers.value = Array(questions.value.length).fill(null)
 
-    // Set total time from exam data or default to 20 minutes
-    totalTime.value = examData.value.duration ? examData.value.duration * 60 : 20 * 60
+    // Set total time from exam data or default to 30 minutes
+    totalTime.value = examData.value.duration ? examData.value.duration * 60 : 30 * 60
 
     // Check if this is a new exam (no saved state) - set start time
     const savedState = localStorage.getItem('quizState')
