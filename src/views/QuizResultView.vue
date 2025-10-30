@@ -10,7 +10,7 @@
         </p>
 
         <div class="info-content">
-          <p class="info-title">Vui lòng chọn ca thi cho Vòng 2 Bản Lĩnh Nhà Đầu Tư 2025:</p>
+          <p class="info-title">Vòng 2 Bản Lĩnh Nhà Đầu Tư 2025 sẽ gồm các ca thi sau:</p>
 
           <div class="schedule-box">
             <div
@@ -19,13 +19,6 @@
               :class="['schedule-item', 'selectable', { selected: selectedSlot === slot }]"
               @click="selectSlot(slot)"
             >
-              <input
-                type="radio"
-                :id="slot"
-                :value="slot"
-                v-model="selectedSlot"
-                class="slot-radio"
-              />
               <label :for="slot" class="slot-label">{{ slot }}</label>
             </div>
           </div>
@@ -45,13 +38,10 @@
 
         <div class="action-buttons">
           <button
-            @click="submitSlotSelection"
-            :disabled="isSubmitting || showSuccess"
+            @click="goHome"
             class="back-to-login-btn"
           >
-            <span v-if="isSubmitting">Đang xử lý...</span>
-            <span v-else-if="showSuccess">Thành công!</span>
-            <span v-else>HOÀN THÀNH</span>
+            <span>HOÀN THÀNH</span>
           </button>
         </div>
       </div>
@@ -73,10 +63,10 @@ const errorMessage = ref('')
 
 // Available exam slots
 const examSlots = [
-  'CA 1: 08h30 - 09h30 ngày 25/10/2025',
-  'CA 2: 10h15 - 11h15 ngày 25/10/2025',
-  'CA 3: 14h00 - 15h00 ngày 25/10/2025',
-  'CA 4: 15h45 - 16h45 ngày 25/10/2025',
+  'CA 1: 08h30 - 09h30 ngày 16/11/2025',
+  'CA 2: 10h15 - 11h15 ngày 16/11/2025',
+  'CA 3: 14h00 - 15h00 ngày 16/11/2025',
+  'CA 4: 15h45 - 16h45 ngày 16/11/2025',
 ]
 
 // Check authentication on component mount
