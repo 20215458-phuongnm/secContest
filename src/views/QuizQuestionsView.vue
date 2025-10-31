@@ -418,60 +418,103 @@ const performSubmit = async () => {
   isSubmitting.value = true
   isAutoSubmitting.value = true
 
-  try {
-    // Prepare answers for API submission
-    const answers = userAnswers.value
-      .map((answer, index) => {
-        if (answer && answer.answerId && answer.questionId) {
-          return {
-            questionId: answer.questionId,
-            answerId: answer.answerId,
-          }
+  // Prepare answers for API submission
+  const answers = userAnswers.value
+    .map((answer, index) => {
+      if (answer && answer.answerId && answer.questionId) {
+        return {
+          questionId: answer.questionId,
+          answerId: answer.answerId,
         }
-        return null
-      })
-      .filter((answer) => answer !== null)
-
-    const examSubmissionData = {
-      sessionId: sessionId.value,
-      answers: answers,
-    }
-
-    console.log('Submitting exam:', examSubmissionData)
-
-    const response = await examApi.submitExam(examSubmissionData)
-
-    if (response.success) {
-      console.log('Exam submitted successfully:', response.data)
-
-      // Clear timer
-      if (quizTimer.value) {
-        clearInterval(quizTimer.value)
       }
+      return null
+    })
+    .filter((answer) => answer !== null)
 
-      // Save quiz results for display on results page
-      const quizResults = {
-        ...response.data,
-        userAnswers: userAnswers.value,
-        submissionTime: new Date().toISOString(),
-      }
-      sessionStorage.setItem('quizResults', JSON.stringify(quizResults))
-
-      // Clear saved quiz state and exam data after submission
-      localStorage.removeItem('quizState')
-      sessionStorage.removeItem('examData')
-
-      // Redirect to results page
-      router.push('/quiz-result')
-    } else {
-      throw new Error(response.message || 'Failed to submit exam')
-    }
-  } catch (error) {
-    console.error('Failed to submit exam:', error)
-    alert('Có lỗi xảy ra khi nộp bài. Vui lòng thử lại.')
-  } finally {
-    isSubmitting.value = false
+  const examSubmissionData = {
+    sessionId: sessionId.value,
+    answers: answers,
   }
+
+  console.log('Submitting exam (fire-and-forget):', examSubmissionData)
+
+  // Save partial results immediately so results page can render without waiting for API
+  const partialResults = {
+    userAnswers: userAnswers.value,
+    answeredCount: answeredCount.value,
+    totalQuestions: questions.value.length,
+    submissionTime: new Date().toISOString(),
+    pendingSubmission: true,
+    autoSubmitted: isAutoSubmitting.value,
+  }
+  try {
+    sessionStorage.setItem('quizResults', JSON.stringify(partialResults))
+  } catch (e) {
+    console.warn('Could not save partial quizResults to sessionStorage:', e)
+  }
+
+  // Clear local saved state and stop timer now
+  try {
+    if (quizTimer.value) {
+      clearInterval(quizTimer.value)
+    }
+    localStorage.removeItem('quizState')
+    sessionStorage.removeItem('examData')
+  } catch (e) {
+    console.warn('Error during cleanup before routing to results:', e)
+  }
+
+  // Route immediately to results page; API will continue in background
+  router.push('/quiz-result')
+
+  // Fire-and-forget API call: don't await to avoid blocking navigation
+  ;(async () => {
+    try {
+      const response = await examApi.submitExam(examSubmissionData)
+      if (response && response.success) {
+        // Merge server results into sessionStorage so results page can show final data
+        const finalResults = {
+          ...response.data,
+          userAnswers: userAnswers.value,
+          submissionTime: new Date().toISOString(),
+          pendingSubmission: false,
+        }
+        try {
+          sessionStorage.setItem('quizResults', JSON.stringify(finalResults))
+        } catch (e) {
+          console.warn('Could not save final quizResults to sessionStorage:', e)
+        }
+      } else {
+        console.warn('Submit API returned failure:', response)
+        // Keep partial results; optionally annotate failure
+        try {
+          const r = JSON.parse(sessionStorage.getItem('quizResults') || '{}')
+          r.submissionError = response && response.message ? response.message : 'Submit failed'
+          r.pendingSubmission = false
+          sessionStorage.setItem('quizResults', JSON.stringify(r))
+        } catch (e) {
+          console.warn('Could not annotate sessionStorage after failed submit:', e)
+        }
+      }
+    } catch (err) {
+      console.error('Background submit failed:', err)
+      try {
+        const r = JSON.parse(sessionStorage.getItem('quizResults') || '{}')
+        r.submissionError = err.message || 'Network error'
+        r.pendingSubmission = false
+        sessionStorage.setItem('quizResults', JSON.stringify(r))
+      } catch (e) {
+        console.warn('Could not annotate sessionStorage after background submit error:', e)
+      }
+    } finally {
+      // Attempt to reset submitting flag if component still mounted
+      try {
+        isSubmitting.value = false
+      } catch (e) {
+        // ignore if unmounted
+      }
+    }
+  })()
 }
 
 const startTimer = () => {
