@@ -187,6 +187,28 @@ const loadQuizState = () => {
   const savedState = localStorage.getItem('quizState')
   if (savedState) {
     const state = JSON.parse(savedState)
+
+    // If the saved state belongs to a different user or session, ignore it.
+    try {
+      const currentUser = getUser()
+      if (
+        !state.userId ||
+        !currentUser ||
+        state.userId !== currentUser.id ||
+        (state.sessionId && sessionId.value && state.sessionId !== sessionId.value)
+      ) {
+        // Clear stale state so another user's progress isn't leaked
+        localStorage.removeItem('quizState')
+        console.log('Cleared stale quizState (belongs to another user or session)')
+        return
+      }
+    } catch (err) {
+      // If getUser throws or state malformed, remove saved state to be safe
+      localStorage.removeItem('quizState')
+      console.warn('Removed invalid quizState during load:', err)
+      return
+    }
+
     currentQuestion.value = state.currentQuestion || 0
     userAnswers.value = state.userAnswers || Array(questions.value.length).fill(null)
 
@@ -219,6 +241,15 @@ const saveQuizState = () => {
     totalTime: totalTime.value,
     lastSaved: Date.now(),
   }
+  // Attach current user and session so saved state is scoped to that user/session
+  try {
+    const u = getUser()
+    state.userId = u ? u.id : null
+  } catch (e) {
+    state.userId = null
+  }
+  state.sessionId = sessionId.value
+
   localStorage.setItem('quizState', JSON.stringify(state))
 }
 
